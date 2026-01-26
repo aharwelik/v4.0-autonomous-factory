@@ -1,0 +1,263 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "V4.0 Autonomous Factory - Budget Limits Configuration",
+
+  "version": "1.0.0",
+  "lastUpdated": "2025-01-26",
+
+  "budgetTiers": {
+    "bootstrap": {
+      "description": "Minimal budget for testing and early development",
+      "monthlyLimit": 20.00,
+      "currency": "USD",
+      "agentParallelism": 2,
+      "maxConcurrentTasks": 3,
+      "preferredModels": ["gemini-2.0-flash", "glm-4-flash"],
+      "restrictions": {
+        "noImageGeneration": true,
+        "noVideoGeneration": true,
+        "limitedWebSearch": true,
+        "maxRequestsPerHour": 50
+      }
+    },
+    "comfortable": {
+      "description": "Standard budget for active development",
+      "monthlyLimit": 100.00,
+      "currency": "USD",
+      "agentParallelism": 4,
+      "maxConcurrentTasks": 8,
+      "preferredModels": ["claude-sonnet-4-20250514", "gemini-2.0-flash"],
+      "restrictions": {
+        "noImageGeneration": false,
+        "noVideoGeneration": true,
+        "limitedWebSearch": false,
+        "maxRequestsPerHour": 200
+      }
+    },
+    "growth": {
+      "description": "Expanded budget for scaling operations",
+      "monthlyLimit": 500.00,
+      "currency": "USD",
+      "agentParallelism": 8,
+      "maxConcurrentTasks": 20,
+      "preferredModels": ["claude-opus-4-20250514", "claude-sonnet-4-20250514", "gemini-2.0-pro"],
+      "restrictions": {
+        "noImageGeneration": false,
+        "noVideoGeneration": false,
+        "limitedWebSearch": false,
+        "maxRequestsPerHour": 500
+      }
+    }
+  },
+
+  "activeTier": "comfortable",
+
+  "perServiceLimits": {
+    "$comment": "Monthly spending limits per service (in USD)",
+
+    "claude": {
+      "monthlyLimit": 50.00,
+      "dailyLimit": 5.00,
+      "perRequestMax": 0.50,
+      "priority": 1,
+      "fallbackTo": "gemini"
+    },
+    "gemini": {
+      "monthlyLimit": 20.00,
+      "dailyLimit": 2.00,
+      "perRequestMax": 0.10,
+      "priority": 2,
+      "fallbackTo": "glm"
+    },
+    "grok": {
+      "monthlyLimit": 15.00,
+      "dailyLimit": 1.50,
+      "perRequestMax": 0.20,
+      "priority": 3,
+      "fallbackTo": "gemini"
+    },
+    "glm": {
+      "monthlyLimit": 5.00,
+      "dailyLimit": 0.50,
+      "perRequestMax": 0.02,
+      "priority": 4,
+      "fallbackTo": null
+    },
+    "capsolver": {
+      "monthlyLimit": 10.00,
+      "dailyLimit": 1.00,
+      "perRequestMax": 0.01,
+      "priority": 5,
+      "fallbackTo": null
+    },
+    "proxy": {
+      "monthlyLimit": 5.00,
+      "dailyLimit": 0.50,
+      "perRequestMax": 0.005,
+      "priority": 6,
+      "fallbackTo": null
+    },
+    "vercel": {
+      "monthlyLimit": 20.00,
+      "dailyLimit": 2.00,
+      "perRequestMax": null,
+      "priority": 7,
+      "fallbackTo": null
+    },
+    "stripe": {
+      "$comment": "Stripe fees are percentage-based, this is for subscription costs",
+      "monthlyLimit": 0.00,
+      "dailyLimit": null,
+      "perRequestMax": null,
+      "priority": 8,
+      "fallbackTo": null
+    }
+  },
+
+  "alertThresholds": {
+    "warning": {
+      "percentage": 75,
+      "actions": ["log", "telegram_notify"],
+      "message": "Budget at 75% - Consider reducing parallelism"
+    },
+    "critical": {
+      "percentage": 90,
+      "actions": ["log", "telegram_notify", "reduce_parallelism"],
+      "message": "Budget at 90% - Auto-reducing operations"
+    },
+    "exceeded": {
+      "percentage": 100,
+      "actions": ["log", "telegram_notify", "pause_non_essential"],
+      "message": "Budget exceeded - Pausing non-essential operations"
+    }
+  },
+
+  "autoPauseSettings": {
+    "enabled": true,
+    "thresholds": {
+      "softPause": {
+        "percentage": 90,
+        "pauseTypes": ["marketing", "research", "optimization"],
+        "allowTypes": ["critical", "monitoring", "alerts"]
+      },
+      "hardPause": {
+        "percentage": 100,
+        "pauseTypes": ["all"],
+        "allowTypes": ["monitoring", "alerts"],
+        "requireManualResume": true
+      }
+    },
+    "exemptOperations": [
+      "health_check",
+      "error_reporting",
+      "critical_alerts",
+      "payment_processing"
+    ]
+  },
+
+  "parallelismByBudgetUsage": {
+    "$comment": "Dynamically adjust parallelism based on current budget usage",
+    "rules": [
+      {
+        "usageRange": [0, 50],
+        "maxAgents": 8,
+        "maxConcurrentTasks": 20
+      },
+      {
+        "usageRange": [50, 70],
+        "maxAgents": 5,
+        "maxConcurrentTasks": 12
+      },
+      {
+        "usageRange": [70, 85],
+        "maxAgents": 3,
+        "maxConcurrentTasks": 6
+      },
+      {
+        "usageRange": [85, 95],
+        "maxAgents": 2,
+        "maxConcurrentTasks": 3
+      },
+      {
+        "usageRange": [95, 100],
+        "maxAgents": 1,
+        "maxConcurrentTasks": 1
+      }
+    ]
+  },
+
+  "costTracking": {
+    "enabled": true,
+    "granularity": "per_request",
+    "storage": {
+      "type": "database",
+      "tableName": "cost_tracking",
+      "retentionDays": 90
+    },
+    "aggregations": {
+      "hourly": true,
+      "daily": true,
+      "weekly": true,
+      "monthly": true
+    },
+    "reportingSchedule": {
+      "daily": {
+        "enabled": true,
+        "time": "23:59",
+        "timezone": "UTC",
+        "destination": ["telegram", "dashboard"]
+      },
+      "weekly": {
+        "enabled": true,
+        "dayOfWeek": "sunday",
+        "time": "23:59",
+        "timezone": "UTC",
+        "destination": ["telegram", "dashboard", "email"]
+      }
+    },
+    "modelPricing": {
+      "$comment": "Prices per 1M tokens (input/output), updated 2025-01",
+      "claude-opus-4-20250514": {
+        "input": 15.00,
+        "output": 75.00
+      },
+      "claude-sonnet-4-20250514": {
+        "input": 3.00,
+        "output": 15.00
+      },
+      "gemini-2.0-pro": {
+        "input": 1.25,
+        "output": 5.00
+      },
+      "gemini-2.0-flash": {
+        "input": 0.075,
+        "output": 0.30
+      },
+      "grok-2": {
+        "input": 2.00,
+        "output": 10.00
+      },
+      "glm-4-flash": {
+        "input": 0.01,
+        "output": 0.01
+      }
+    }
+  },
+
+  "budgetResetSchedule": {
+    "type": "monthly",
+    "resetDay": 1,
+    "timezone": "UTC",
+    "carryOverUnused": false,
+    "notifyOnReset": true
+  },
+
+  "emergencyOverride": {
+    "$comment": "Settings for manual budget override in emergencies",
+    "enabled": false,
+    "maxOverridePercentage": 20,
+    "requiresApproval": true,
+    "approvalMethods": ["telegram_confirm", "dashboard_confirm"],
+    "logAllOverrides": true
+  }
+}

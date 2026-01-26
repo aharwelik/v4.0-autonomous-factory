@@ -1,0 +1,222 @@
+{
+  "sequence_name": "Trial Ending Sequence",
+  "description": "Convert trial users to paid customers before their trial expires",
+  "trigger": "trial_days_remaining",
+  "total_emails": 3,
+  "emails": [
+    {
+      "email_number": 1,
+      "send_day": -7,
+      "send_day_description": "7 days before trial ends",
+      "send_time": "10:00",
+      "subject": "{{first_name}}, your trial ends in 7 days",
+      "preview_text": "Here's what you'll lose access to (and how to keep it all).",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "urgency_banner",
+            "content": "Your {{product_name}} trial ends in 7 days",
+            "style": "subtle"
+          },
+          {
+            "type": "text",
+            "content": "Time flies when you're being productive! You've been using {{product_name}} for {{trial_days_used}} days now."
+          },
+          {
+            "type": "usage_summary",
+            "title": "Here's what you've accomplished",
+            "stats": [
+              {
+                "label": "{{metric_1_label}}",
+                "value": "{{metric_1_value}}",
+                "icon": "{{metric_1_icon}}"
+              },
+              {
+                "label": "{{metric_2_label}}",
+                "value": "{{metric_2_value}}",
+                "icon": "{{metric_2_icon}}"
+              },
+              {
+                "label": "{{metric_3_label}}",
+                "value": "{{metric_3_value}}",
+                "icon": "{{metric_3_icon}}"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "content": "To keep all your work and continue with uninterrupted access, simply choose a plan that works for you."
+          },
+          {
+            "type": "plan_comparison",
+            "title": "Choose your plan",
+            "plans": [
+              {
+                "name": "{{plan_1_name}}",
+                "price": "{{plan_1_price}}",
+                "billing": "per month",
+                "features": ["{{plan_1_feature_1}}", "{{plan_1_feature_2}}", "{{plan_1_feature_3}}"],
+                "url": "{{checkout_url}}?plan={{plan_1_id}}"
+              },
+              {
+                "name": "{{plan_2_name}}",
+                "price": "{{plan_2_price}}",
+                "billing": "per month",
+                "popular": true,
+                "features": ["{{plan_2_feature_1}}", "{{plan_2_feature_2}}", "{{plan_2_feature_3}}", "{{plan_2_feature_4}}"],
+                "url": "{{checkout_url}}?plan={{plan_2_id}}"
+              }
+            ]
+          },
+          {
+            "type": "guarantee",
+            "content": "30-day money-back guarantee. No questions asked."
+          }
+        ],
+        "closing": "Don't lose your progress!",
+        "signature": "{{sender_name}}"
+      },
+      "cta_text": "Choose a Plan",
+      "cta_url": "{{app_url}}/pricing",
+      "tags": ["trial-ending", "day-7", "conversion"]
+    },
+    {
+      "email_number": 2,
+      "send_day": -3,
+      "send_day_description": "3 days before trial ends",
+      "send_time": "10:00",
+      "subject": "3 days left: Don't lose your {{primary_object}}s",
+      "preview_text": "Your trial is almost over. Here's a special offer to continue.",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "urgency_banner",
+            "content": "Only 3 days left in your trial",
+            "style": "moderate"
+          },
+          {
+            "type": "text",
+            "content": "Your {{product_name}} trial ends in just 3 days. After that, you'll lose access to:"
+          },
+          {
+            "type": "loss_list",
+            "title": "What you'll lose",
+            "items": [
+              {
+                "item": "{{item_count}} {{primary_object}}s you've created",
+                "icon": "folder"
+              },
+              {
+                "item": "{{data_point}} saved in your workspace",
+                "icon": "database"
+              },
+              {
+                "item": "All integrations and connections",
+                "icon": "plug"
+              },
+              {
+                "item": "Team collaboration features",
+                "icon": "users"
+              }
+            ]
+          },
+          {
+            "type": "special_offer",
+            "title": "Special offer for you",
+            "discount": "{{discount_percentage}}% off",
+            "duration": "your first {{discount_duration}}",
+            "code": "{{discount_code}}",
+            "expiry": "Expires when your trial ends"
+          },
+          {
+            "type": "text",
+            "content": "This is our way of saying thanks for trying {{product_name}}."
+          }
+        ],
+        "closing": "Upgrade now and save,",
+        "signature": "{{sender_name}}"
+      },
+      "cta_text": "Claim {{discount_percentage}}% Off",
+      "cta_url": "{{checkout_url}}?code={{discount_code}}",
+      "tags": ["trial-ending", "day-3", "discount", "conversion"]
+    },
+    {
+      "email_number": 3,
+      "send_day": -1,
+      "send_day_description": "1 day before trial ends",
+      "send_time": "09:00",
+      "subject": "Final notice: Your trial ends tomorrow",
+      "preview_text": "Last chance to keep your account active.",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "urgency_banner",
+            "content": "Your trial ends TOMORROW",
+            "style": "urgent"
+          },
+          {
+            "type": "text",
+            "content": "This is your final reminder. After tomorrow, your {{product_name}} account will be downgraded and you'll lose access to premium features."
+          },
+          {
+            "type": "countdown_timer",
+            "expiry": "{{trial_end_date}}",
+            "message": "Time remaining"
+          },
+          {
+            "type": "final_offer",
+            "title": "Last chance offer",
+            "content": "Upgrade in the next 24 hours and keep your {{discount_percentage}}% discount - plus we'll extend your billing date by 7 days for free.",
+            "value_highlight": "That's {{extra_days}} extra days of {{product_name}} at no cost!"
+          },
+          {
+            "type": "objection_handling",
+            "items": [
+              {
+                "objection": "Not sure if it's right for me",
+                "response": "Our 30-day money-back guarantee means zero risk. Try it, and if it's not for you, get a full refund."
+              },
+              {
+                "objection": "Need to talk to my team first",
+                "response": "No problem! Reply to this email and we can arrange a quick call or extend your trial."
+              },
+              {
+                "objection": "Budget constraints",
+                "response": "We have flexible plans starting at just {{lowest_price}}/month. Let's find one that works."
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "content": "Questions? Reply to this email - I'm here to help."
+          }
+        ],
+        "closing": "Don't let your hard work disappear,",
+        "signature": "{{sender_name}}\n{{sender_title}}"
+      },
+      "cta_text": "Upgrade Now - Keep Your Discount",
+      "cta_url": "{{checkout_url}}?code={{discount_code}}&extend=7",
+      "tags": ["trial-ending", "day-1", "final-notice", "conversion"]
+    }
+  ],
+  "settings": {
+    "unsubscribe_link": true,
+    "track_opens": true,
+    "track_clicks": true,
+    "send_timezone": "user_local",
+    "skip_weekends": false,
+    "exit_conditions": [
+      "user_converts_to_paid",
+      "user_unsubscribes",
+      "trial_extended"
+    ],
+    "a_b_test": {
+      "enabled": true,
+      "variants": ["discount_10", "discount_20", "no_discount"],
+      "metric": "conversion_rate"
+    }
+  }
+}

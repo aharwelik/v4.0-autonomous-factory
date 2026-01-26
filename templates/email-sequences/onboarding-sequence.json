@@ -1,0 +1,264 @@
+{
+  "sequence_name": "Onboarding Sequence",
+  "description": "Guide users through key activation milestones to ensure product adoption",
+  "trigger": "user_completes_signup",
+  "total_emails": 4,
+  "emails": [
+    {
+      "email_number": 1,
+      "send_day": 0,
+      "send_time": "immediate",
+      "delay_after_trigger": "1_hour",
+      "subject": "Step 1 of 4: Set up your {{product_name}} workspace",
+      "preview_text": "Complete these 4 steps to unlock the full power of {{product_name}}.",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "progress_indicator",
+            "current_step": 1,
+            "total_steps": 4,
+            "completed_steps": []
+          },
+          {
+            "type": "text",
+            "content": "Let's get your workspace ready! This first step takes about 3 minutes and sets the foundation for everything else."
+          },
+          {
+            "type": "task_card",
+            "title": "Configure Your Workspace",
+            "description": "Personalize your settings and preferences",
+            "time_estimate": "3 minutes",
+            "steps": [
+              "Choose your workspace name",
+              "Set your timezone and preferences",
+              "Upload your logo (optional)"
+            ]
+          },
+          {
+            "type": "text",
+            "content": "Why this matters: A well-configured workspace helps you stay organized and makes collaboration easier."
+          },
+          {
+            "type": "help_link",
+            "text": "Need help? Check out our setup guide",
+            "url": "{{docs_url}}/workspace-setup"
+          }
+        ],
+        "closing": "Let's do this!",
+        "signature": "{{sender_name}}"
+      },
+      "cta_text": "Configure Workspace",
+      "cta_url": "{{app_url}}/onboarding/workspace",
+      "tags": ["onboarding", "step-1", "workspace"]
+    },
+    {
+      "email_number": 2,
+      "send_day": 1,
+      "send_time": "09:00",
+      "condition": "workspace_configured OR send_day >= 1",
+      "subject": "Step 2 of 4: Connect your first integration",
+      "preview_text": "Import your existing data and connect the tools you already use.",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "progress_indicator",
+            "current_step": 2,
+            "total_steps": 4,
+            "completed_steps": ["workspace"]
+          },
+          {
+            "type": "conditional_text",
+            "condition": "workspace_configured",
+            "if_true": "Great job setting up your workspace! Now let's connect your tools.",
+            "if_false": "Let's keep the momentum going with step 2."
+          },
+          {
+            "type": "task_card",
+            "title": "Connect Your First Integration",
+            "description": "Sync data from tools you already use",
+            "time_estimate": "5 minutes",
+            "integrations_highlight": [
+              {
+                "name": "{{integration_1_name}}",
+                "icon": "{{integration_1_icon}}",
+                "benefit": "{{integration_1_benefit}}"
+              },
+              {
+                "name": "{{integration_2_name}}",
+                "icon": "{{integration_2_icon}}",
+                "benefit": "{{integration_2_benefit}}"
+              },
+              {
+                "name": "{{integration_3_name}}",
+                "icon": "{{integration_3_icon}}",
+                "benefit": "{{integration_3_benefit}}"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "content": "Why this matters: Integrations let you work in {{product_name}} without leaving your existing workflow."
+          },
+          {
+            "type": "social_proof",
+            "content": "90% of our most successful users connect at least one integration in their first week."
+          }
+        ],
+        "closing": "You're making great progress!",
+        "signature": "{{sender_name}}"
+      },
+      "cta_text": "Browse Integrations",
+      "cta_url": "{{app_url}}/onboarding/integrations",
+      "tags": ["onboarding", "step-2", "integrations"]
+    },
+    {
+      "email_number": 3,
+      "send_day": 3,
+      "send_time": "10:00",
+      "condition": "integration_connected OR send_day >= 3",
+      "subject": "Step 3 of 4: Invite your team",
+      "preview_text": "{{product_name}} is better together. Add your teammates in one click.",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "progress_indicator",
+            "current_step": 3,
+            "total_steps": 4,
+            "completed_steps": ["workspace", "integrations"]
+          },
+          {
+            "type": "text",
+            "content": "You're doing great! Now it's time to bring your team along for the ride."
+          },
+          {
+            "type": "task_card",
+            "title": "Invite Team Members",
+            "description": "Collaborate in real-time with your team",
+            "time_estimate": "2 minutes",
+            "steps": [
+              "Click 'Invite Team' in your dashboard",
+              "Enter email addresses or share an invite link",
+              "Assign roles (Admin, Member, Viewer)"
+            ]
+          },
+          {
+            "type": "benefits_grid",
+            "title": "Why teams love {{product_name}}",
+            "items": [
+              {
+                "icon": "collaboration",
+                "title": "Real-time collaboration",
+                "description": "Work together simultaneously"
+              },
+              {
+                "icon": "notifications",
+                "title": "Smart notifications",
+                "description": "Stay in sync without the noise"
+              },
+              {
+                "icon": "permissions",
+                "title": "Flexible permissions",
+                "description": "Control who sees what"
+              }
+            ]
+          },
+          {
+            "type": "conditional_text",
+            "condition": "team_size > 1",
+            "if_true": "You already have {{team_size}} team members - great!",
+            "if_false": ""
+          }
+        ],
+        "closing": "Collaboration awaits!",
+        "signature": "{{sender_name}}"
+      },
+      "cta_text": "Invite Team Members",
+      "cta_url": "{{app_url}}/onboarding/team",
+      "tags": ["onboarding", "step-3", "team"]
+    },
+    {
+      "email_number": 4,
+      "send_day": 5,
+      "send_time": "10:00",
+      "condition": "team_invited OR send_day >= 5",
+      "subject": "Step 4 of 4: Create your first {{primary_object}}",
+      "preview_text": "The final step! Let's put everything together.",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "progress_indicator",
+            "current_step": 4,
+            "total_steps": 4,
+            "completed_steps": ["workspace", "integrations", "team"]
+          },
+          {
+            "type": "celebration",
+            "content": "You're on the final step! Let's bring it all together."
+          },
+          {
+            "type": "task_card",
+            "title": "Create Your First {{primary_object}}",
+            "description": "Experience the core value of {{product_name}}",
+            "time_estimate": "5 minutes",
+            "template_options": [
+              {
+                "name": "{{template_1_name}}",
+                "description": "{{template_1_description}}",
+                "url": "{{app_url}}/create?template={{template_1_id}}"
+              },
+              {
+                "name": "{{template_2_name}}",
+                "description": "{{template_2_description}}",
+                "url": "{{app_url}}/create?template={{template_2_id}}"
+              },
+              {
+                "name": "Start from scratch",
+                "description": "Build exactly what you need",
+                "url": "{{app_url}}/create"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "content": "Once you create your first {{primary_object}}, you'll see why thousands of teams rely on {{product_name}} every day."
+          },
+          {
+            "type": "completion_reward",
+            "title": "Complete all 4 steps to unlock:",
+            "rewards": [
+              "Extended trial period (+7 days)",
+                "Access to premium templates",
+              "Priority support access"
+            ]
+          }
+        ],
+        "closing": "You've got this!",
+        "signature": "{{sender_name}}\n{{sender_title}}"
+      },
+      "cta_text": "Create Your First {{primary_object}}",
+      "cta_url": "{{app_url}}/create",
+      "tags": ["onboarding", "step-4", "activation"]
+    }
+  ],
+  "settings": {
+    "unsubscribe_link": true,
+    "track_opens": true,
+    "track_clicks": true,
+    "send_timezone": "user_local",
+    "skip_weekends": true,
+    "completion_webhook": "{{webhook_url}}/onboarding-complete",
+    "exit_conditions": [
+      "all_steps_completed",
+      "user_unsubscribes",
+      "user_inactive_14_days"
+    ],
+    "behavior_triggers": {
+      "skip_to_next": "current_step_completed",
+      "resend_after_inactivity": "3_days"
+    }
+  }
+}

@@ -1,0 +1,247 @@
+{
+  "sequence_name": "Win-Back Sequence",
+  "description": "Re-engage churned users and encourage them to return to the product",
+  "trigger": "subscription_canceled",
+  "delay_before_start": "3_days",
+  "total_emails": 3,
+  "emails": [
+    {
+      "email_number": 1,
+      "send_day": 3,
+      "send_day_description": "3 days after cancellation",
+      "send_time": "10:00",
+      "subject": "We miss you, {{first_name}}",
+      "preview_text": "Your feedback matters. Quick question about why you left.",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "text",
+            "content": "We noticed you recently canceled your {{product_name}} subscription, and honestly, we're sad to see you go."
+          },
+          {
+            "type": "text",
+            "content": "Before you leave for good, I'd love to understand what happened. Your feedback helps us improve for everyone."
+          },
+          {
+            "type": "survey",
+            "title": "Quick question: Why did you cancel?",
+            "options": [
+              {
+                "label": "Too expensive",
+                "value": "price",
+                "followup_url": "{{feedback_url}}?reason=price"
+              },
+              {
+                "label": "Missing features I need",
+                "value": "features",
+                "followup_url": "{{feedback_url}}?reason=features"
+              },
+              {
+                "label": "Too complicated to use",
+                "value": "complexity",
+                "followup_url": "{{feedback_url}}?reason=complexity"
+              },
+              {
+                "label": "Found a better alternative",
+                "value": "competitor",
+                "followup_url": "{{feedback_url}}?reason=competitor"
+              },
+              {
+                "label": "Not using it enough",
+                "value": "usage",
+                "followup_url": "{{feedback_url}}?reason=usage"
+              },
+              {
+                "label": "Something else",
+                "value": "other",
+                "followup_url": "{{feedback_url}}?reason=other"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "content": "Clicking any option above helps us more than you know. And if there's anything we can do to win you back, just reply to this email."
+          },
+          {
+            "type": "account_status",
+            "title": "Your account status",
+            "items": [
+              "Your data is saved for {{data_retention_days}} days",
+              "You can reactivate anytime",
+              "All your settings will be preserved"
+            ]
+          }
+        ],
+        "closing": "Thanks for giving us a chance,",
+        "signature": "{{sender_name}}\nFounder, {{product_name}}"
+      },
+      "cta_text": "Share Your Feedback",
+      "cta_url": "{{feedback_url}}",
+      "tags": ["win-back", "day-3", "feedback"]
+    },
+    {
+      "email_number": 2,
+      "send_day": 14,
+      "send_day_description": "14 days after cancellation",
+      "send_time": "10:00",
+      "subject": "What's new at {{product_name}} (you might like this)",
+      "preview_text": "We've been busy improving. Here's what you missed.",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "text",
+            "content": "It's been a couple weeks since you left {{product_name}}, and we've been busy making things better based on feedback from users like you."
+          },
+          {
+            "type": "whats_new",
+            "title": "Here's what's new",
+            "items": [
+              {
+                "title": "{{update_1_title}}",
+                "description": "{{update_1_description}}",
+                "icon": "{{update_1_icon}}",
+                "highlight": "{{update_1_tag}}"
+              },
+              {
+                "title": "{{update_2_title}}",
+                "description": "{{update_2_description}}",
+                "icon": "{{update_2_icon}}",
+                "highlight": "{{update_2_tag}}"
+              },
+              {
+                "title": "{{update_3_title}}",
+                "description": "{{update_3_description}}",
+                "icon": "{{update_3_icon}}",
+                "highlight": "{{update_3_tag}}"
+              }
+            ]
+          },
+          {
+            "type": "conditional_content",
+            "condition": "cancel_reason == 'price'",
+            "content": {
+              "type": "special_offer",
+              "title": "We heard you on pricing",
+              "content": "Come back at {{win_back_discount}}% off for your first {{discount_duration}} months.",
+              "code": "{{win_back_code}}"
+            }
+          },
+          {
+            "type": "conditional_content",
+            "condition": "cancel_reason == 'features'",
+            "content": {
+              "type": "feature_announcement",
+              "title": "The feature you wanted might be here",
+              "content": "We've shipped {{new_features_count}} new features in the past month. Take a look - what you needed might be waiting for you."
+            }
+          },
+          {
+            "type": "text",
+            "content": "Ready to give us another shot?"
+          }
+        ],
+        "closing": "We'd love to have you back,",
+        "signature": "{{sender_name}}"
+      },
+      "cta_text": "See What's New",
+      "cta_url": "{{app_url}}/changelog",
+      "secondary_cta_text": "Reactivate Account",
+      "secondary_cta_url": "{{app_url}}/reactivate?code={{win_back_code}}",
+      "tags": ["win-back", "day-14", "product-updates"]
+    },
+    {
+      "email_number": 3,
+      "send_day": 30,
+      "send_day_description": "30 days after cancellation",
+      "send_time": "10:00",
+      "subject": "Last chance to save your {{product_name}} data",
+      "preview_text": "Your account and data will be deleted in {{days_until_deletion}} days.",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "warning_banner",
+            "content": "Your data will be permanently deleted in {{days_until_deletion}} days",
+            "style": "warning"
+          },
+          {
+            "type": "text",
+            "content": "This is a courtesy reminder that your {{product_name}} account is scheduled for deletion."
+          },
+          {
+            "type": "data_summary",
+            "title": "What will be deleted",
+            "items": [
+              "{{item_1_count}} {{item_1_type}}",
+              "{{item_2_count}} {{item_2_type}}",
+              "{{item_3_count}} {{item_3_type}}",
+              "All account settings and preferences"
+            ]
+          },
+          {
+            "type": "options",
+            "title": "Your options",
+            "items": [
+              {
+                "option": "Reactivate your account",
+                "description": "Pick up right where you left off with all your data intact",
+                "cta": "Reactivate Now",
+                "url": "{{app_url}}/reactivate"
+              },
+              {
+                "option": "Export your data",
+                "description": "Download everything before deletion",
+                "cta": "Export Data",
+                "url": "{{app_url}}/export"
+              },
+              {
+                "option": "Do nothing",
+                "description": "Your account will be automatically deleted on {{deletion_date}}"
+              }
+            ]
+          },
+          {
+            "type": "final_offer",
+            "title": "One last thing",
+            "content": "If you come back now, we'll give you {{final_offer_discount}}% off for the next {{final_offer_duration}} months. No strings attached.",
+            "code": "{{final_offer_code}}",
+            "expiry": "Expires on {{deletion_date}}"
+          },
+          {
+            "type": "text",
+            "content": "Whatever you decide, thank you for being part of the {{product_name}} community. We wish you all the best."
+          }
+        ],
+        "closing": "Take care,",
+        "signature": "{{sender_name}}\nFounder, {{product_name}}"
+      },
+      "cta_text": "Reactivate & Save {{final_offer_discount}}%",
+      "cta_url": "{{app_url}}/reactivate?code={{final_offer_code}}",
+      "tags": ["win-back", "day-30", "final-notice", "data-deletion"]
+    }
+  ],
+  "settings": {
+    "unsubscribe_link": true,
+    "track_opens": true,
+    "track_clicks": true,
+    "send_timezone": "user_local",
+    "skip_weekends": true,
+    "exit_conditions": [
+      "user_reactivates",
+      "user_unsubscribes",
+      "account_deleted",
+      "data_exported"
+    ],
+    "personalization": {
+      "by_cancel_reason": true,
+      "by_usage_level": true,
+      "by_plan_type": true
+    },
+    "escalation": {
+      "no_open_after_email_1": "send_sms_reminder",
+      "no_action_after_email_3": "manual_outreach_queue"
+    }
+  }
+}

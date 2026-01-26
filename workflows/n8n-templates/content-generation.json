@@ -1,0 +1,314 @@
+{
+  "name": "App Factory - Content Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "daily-trigger",
+      "name": "Weekdays 8 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "baseId": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_BASE_ID }}",
+          "mode": "id"
+        },
+        "tableId": {
+          "__rl": true,
+          "value": "Content Calendar",
+          "mode": "name"
+        },
+        "filterByFormula": "AND({Status} = 'Scheduled', IS_BEFORE({Scheduled Date}, DATEADD(TODAY(), 1, 'day')))"
+      },
+      "id": "get-scheduled-content",
+      "name": "Get Due Content",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "airtable-credentials",
+          "name": "Airtable API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-twitter",
+              "leftValue": "={{ $json.fields.Platform }}",
+              "rightValue": "Twitter",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-by-platform",
+      "name": "Twitter?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.x.ai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"grok-4\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a Twitter expert who creates engaging, viral content. Each tweet must be under 280 characters. Use hooks that stop scrolling. Be conversational, not salesy.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Create a tweet about: {{ $json.fields.Topic }}\\n\\nProduct context: {{ $json.fields['Product Context'] }}\\n\\nStyle: {{ $json.fields.Style || 'Professional but approachable' }}\\n\\nInclude 1-2 relevant hashtags.\"\n    }\n  ],\n  \"max_tokens\": 200\n}"
+      },
+      "id": "generate-twitter-content",
+      "name": "Generate Tweet (Grok)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "xai-credentials",
+          "name": "xAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1/models/glm-4.5:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Create a LinkedIn post about: {{ $json.fields.Topic }}\\n\\nProduct context: {{ $json.fields['Product Context'] }}\\n\\nRequirements:\\n- Professional but engaging tone\\n- 100-200 words\\n- Include a hook in the first line\\n- End with a question or CTA\\n- Use 2-3 relevant hashtags\"\n    }]\n  }]\n}"
+      },
+      "id": "generate-linkedin-content",
+      "name": "Generate LinkedIn (GLM)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 400],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "gemini-credentials",
+          "name": "Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract generated content from Grok response\nconst response = items[0].json;\nconst content = response.choices?.[0]?.message?.content || '';\nconst originalData = $('Get Due Content').item.json;\n\nreturn [{\n  json: {\n    recordId: originalData.id,\n    platform: 'Twitter',\n    generatedContent: content.trim(),\n    topic: originalData.fields.Topic,\n    status: 'Generated'\n  }\n}];"
+      },
+      "id": "parse-twitter",
+      "name": "Parse Twitter Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract generated content from GLM response\nconst response = items[0].json;\nconst content = response.candidates?.[0]?.content?.parts?.[0]?.text || '';\nconst originalData = $('Get Due Content').item.json;\n\nreturn [{\n  json: {\n    recordId: originalData.id,\n    platform: 'LinkedIn',\n    generatedContent: content.trim(),\n    topic: originalData.fields.Topic,\n    status: 'Generated'\n  }\n}];"
+      },
+      "id": "parse-linkedin",
+      "name": "Parse LinkedIn Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "baseId": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_BASE_ID }}",
+          "mode": "id"
+        },
+        "tableId": {
+          "__rl": true,
+          "value": "Content Calendar",
+          "mode": "name"
+        },
+        "id": "={{ $json.recordId }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Generated Content",
+              "fieldValue": "={{ $json.generatedContent }}"
+            },
+            {
+              "fieldId": "Status",
+              "fieldValue": "Ready for Review"
+            },
+            {
+              "fieldId": "Generated At",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
+      },
+      "id": "update-airtable",
+      "name": "Update Record",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [1340, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "airtable-credentials",
+          "name": "Airtable API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=📝 *Content Generated*\n\n*Platform:* {{ $json.platform }}\n*Topic:* {{ $json.topic }}\n\n*Content:*\n{{ $json.generatedContent }}\n\n✅ Ready for review in Airtable",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "notify-generated",
+      "name": "Notify Generated",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [1560, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Weekdays 8 AM": {
+      "main": [
+        [
+          {
+            "node": "Get Due Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Due Content": {
+      "main": [
+        [
+          {
+            "node": "Twitter?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twitter?": {
+      "main": [
+        [
+          {
+            "node": "Generate Tweet (Grok)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate LinkedIn (GLM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Tweet (Grok)": {
+      "main": [
+        [
+          {
+            "node": "Parse Twitter Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate LinkedIn (GLM)": {
+      "main": [
+        [
+          {
+            "node": "Parse LinkedIn Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Twitter Response": {
+      "main": [
+        [
+          {
+            "node": "Update Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse LinkedIn Response": {
+      "main": [
+        [
+          {
+            "node": "Update Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Record": {
+      "main": [
+        [
+          {
+            "node": "Notify Generated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateId": "app-factory-content-v4"
+  },
+  "tags": [
+    {
+      "name": "App Factory"
+    }
+  ]
+}

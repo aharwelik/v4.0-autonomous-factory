@@ -1,0 +1,424 @@
+{
+  "name": "App Factory - Opportunity Discovery",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 4 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.reddit.com/api/v1/access_token",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "bodyContentType": "formUrlEncoded"
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "client_credentials"
+            }
+          ]
+        }
+      },
+      "id": "reddit-auth",
+      "name": "Reddit Auth",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "reddit-credentials",
+          "name": "Reddit API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://oauth.reddit.com/r/SaaS+microsaas+Entrepreneur+startups/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "\"I wish\" OR \"I'd pay\" OR \"looking for a tool\" OR \"frustrated with\""
+            },
+            {
+              "name": "sort",
+              "value": "new"
+            },
+            {
+              "name": "limit",
+              "value": "50"
+            },
+            {
+              "name": "t",
+              "value": "day"
+            }
+          ]
+        }
+      },
+      "id": "reddit-search",
+      "name": "Search Reddit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter and score Reddit posts for opportunities\nconst posts = items[0].json.data.children || [];\n\nconst opportunitySignals = [\n  'i wish there was',\n  'i\\'d pay for',\n  'looking for a tool',\n  'frustrated with',\n  'anyone know of',\n  'is there an app',\n  'need help with',\n  'why doesn\\'t',\n  'looking for software'\n];\n\nconst scoredPosts = posts.map(post => {\n  const data = post.data;\n  const text = (data.title + ' ' + (data.selftext || '')).toLowerCase();\n  \n  // Calculate signal score\n  let signalScore = 0;\n  opportunitySignals.forEach(signal => {\n    if (text.includes(signal)) signalScore += 10;\n  });\n  \n  // Engagement score\n  const engagementScore = Math.min(data.score, 50) + Math.min(data.num_comments, 30);\n  \n  // Recency bonus (posts from last 12 hours get boost)\n  const hoursAgo = (Date.now() / 1000 - data.created_utc) / 3600;\n  const recencyBonus = hoursAgo < 12 ? 20 : hoursAgo < 24 ? 10 : 0;\n  \n  const totalScore = signalScore + engagementScore + recencyBonus;\n  \n  return {\n    json: {\n      id: data.id,\n      title: data.title,\n      text: data.selftext?.substring(0, 500),\n      subreddit: data.subreddit,\n      url: `https://reddit.com${data.permalink}`,\n      score: data.score,\n      comments: data.num_comments,\n      created: new Date(data.created_utc * 1000).toISOString(),\n      opportunityScore: totalScore,\n      matchedSignals: opportunitySignals.filter(s => text.includes(s))\n    }\n  };\n}).filter(p => p.json.opportunityScore >= 20)\n  .sort((a, b) => b.json.opportunityScore - a.json.opportunityScore)\n  .slice(0, 10);  // Top 10 only\n\nreturn scoredPosts;"
+      },
+      "id": "score-posts",
+      "name": "Score Opportunities",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "model": "claude-3-5-haiku-20241022",
+        "messages": {
+          "values": [
+            {
+              "role": "user",
+              "content": "=Analyze this Reddit post for business opportunity potential:\n\nTitle: {{ $json.title }}\nText: {{ $json.text }}\nSubreddit: {{ $json.subreddit }}\nEngagement: {{ $json.score }} upvotes, {{ $json.comments }} comments\n\nProvide:\n1. Problem statement (1 sentence)\n2. Potential solution (1 sentence)\n3. Target customer\n4. Estimated market size (small/medium/large)\n5. Competition level (low/medium/high)\n6. Build complexity (simple/medium/complex)\n7. Opportunity score (0-100)\n8. Recommendation (PURSUE / RESEARCH MORE / PASS)\n\nRespond in JSON format."
+            }
+          ]
+        },
+        "options": {
+          "maxTokens": 500
+        }
+      },
+      "id": "analyze-opportunity",
+      "name": "AI Analysis",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1,
+      "position": [1120, 300],
+      "credentials": {
+        "anthropicApi": {
+          "id": "anthropic-credentials",
+          "name": "Anthropic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response and combine with original data\nconst original = items[0].json;\nlet analysis;\n\ntry {\n  // Extract JSON from response\n  const responseText = items[0].json.message?.content || items[0].json.text || '';\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : {};\n} catch (e) {\n  analysis = { error: 'Failed to parse AI response', raw: items[0].json };\n}\n\nreturn [{\n  json: {\n    ...original,\n    analysis: analysis,\n    finalScore: analysis.opportunity_score || analysis.opportunityScore || original.opportunityScore,\n    recommendation: analysis.recommendation || 'RESEARCH MORE',\n    processedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse-analysis",
+      "name": "Parse Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "high-score",
+              "leftValue": "={{ $json.finalScore }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-high-score",
+      "name": "Score >= 70?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "baseId": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_BASE_ID }}",
+          "mode": "id"
+        },
+        "tableId": {
+          "__rl": true,
+          "value": "Opportunities",
+          "mode": "name"
+        },
+        "options": {},
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Title",
+              "fieldValue": "={{ $json.title }}"
+            },
+            {
+              "fieldId": "Source",
+              "fieldValue": "Reddit"
+            },
+            {
+              "fieldId": "Source URL",
+              "fieldValue": "={{ $json.url }}"
+            },
+            {
+              "fieldId": "Subreddit",
+              "fieldValue": "={{ $json.subreddit }}"
+            },
+            {
+              "fieldId": "Problem",
+              "fieldValue": "={{ $json.analysis.problem_statement }}"
+            },
+            {
+              "fieldId": "Solution",
+              "fieldValue": "={{ $json.analysis.potential_solution }}"
+            },
+            {
+              "fieldId": "Target Customer",
+              "fieldValue": "={{ $json.analysis.target_customer }}"
+            },
+            {
+              "fieldId": "Market Size",
+              "fieldValue": "={{ $json.analysis.market_size }}"
+            },
+            {
+              "fieldId": "Competition",
+              "fieldValue": "={{ $json.analysis.competition_level }}"
+            },
+            {
+              "fieldId": "Build Complexity",
+              "fieldValue": "={{ $json.analysis.build_complexity }}"
+            },
+            {
+              "fieldId": "Opportunity Score",
+              "fieldValue": "={{ $json.finalScore }}"
+            },
+            {
+              "fieldId": "Recommendation",
+              "fieldValue": "={{ $json.recommendation }}"
+            },
+            {
+              "fieldId": "Status",
+              "fieldValue": "New"
+            },
+            {
+              "fieldId": "Discovered At",
+              "fieldValue": "={{ $json.processedAt }}"
+            }
+          ]
+        }
+      },
+      "id": "save-to-airtable",
+      "name": "Save to Airtable",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [1780, 200],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "airtable-credentials",
+          "name": "Airtable API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=🎯 *New High-Score Opportunity Found!*\n\n*Title:* {{ $json.title }}\n\n*Score:* {{ $json.finalScore }}/100\n*Recommendation:* {{ $json.recommendation }}\n\n*Problem:* {{ $json.analysis.problem_statement }}\n\n*Solution:* {{ $json.analysis.potential_solution }}\n\n*Market:* {{ $json.analysis.market_size }} | *Competition:* {{ $json.analysis.competition_level }}\n\n[View on Reddit]({{ $json.url }})",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-alert",
+      "name": "Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [2000, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "baseId": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_BASE_ID }}",
+          "mode": "id"
+        },
+        "tableId": {
+          "__rl": true,
+          "value": "Discovery Log",
+          "mode": "name"
+        },
+        "options": {},
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Title",
+              "fieldValue": "={{ $json.title }}"
+            },
+            {
+              "fieldId": "Score",
+              "fieldValue": "={{ $json.finalScore }}"
+            },
+            {
+              "fieldId": "Reason",
+              "fieldValue": "Score below 70"
+            }
+          ]
+        }
+      },
+      "id": "log-rejected",
+      "name": "Log Rejected",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [1780, 400],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "airtable-credentials",
+          "name": "Airtable API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 4 Hours": {
+      "main": [
+        [
+          {
+            "node": "Reddit Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reddit Auth": {
+      "main": [
+        [
+          {
+            "node": "Search Reddit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Reddit": {
+      "main": [
+        [
+          {
+            "node": "Score Opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Opportunities": {
+      "main": [
+        [
+          {
+            "node": "AI Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Analysis": {
+      "main": [
+        [
+          {
+            "node": "Parse Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Analysis": {
+      "main": [
+        [
+          {
+            "node": "Score >= 70?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score >= 70?": {
+      "main": [
+        [
+          {
+            "node": "Save to Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Airtable": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateId": "app-factory-discovery-v4"
+  },
+  "tags": [
+    {
+      "name": "App Factory",
+      "createdAt": "2026-01-26T00:00:00.000Z",
+      "updatedAt": "2026-01-26T00:00:00.000Z"
+    }
+  ]
+}

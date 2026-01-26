@@ -1,0 +1,257 @@
+{
+  "sequence_name": "Welcome Sequence",
+  "description": "Onboard new users and introduce them to your product's core value",
+  "trigger": "user_signup",
+  "total_emails": 5,
+  "emails": [
+    {
+      "email_number": 1,
+      "send_day": 0,
+      "send_time": "immediate",
+      "subject": "Welcome to {{product_name}}! Let's get you started",
+      "preview_text": "Your account is ready. Here's how to get the most out of {{product_name}}.",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "text",
+            "content": "Welcome to {{product_name}}! We're thrilled to have you on board."
+          },
+          {
+            "type": "text",
+            "content": "You've just joined thousands of {{target_audience}} who are already {{primary_benefit}}."
+          },
+          {
+            "type": "highlight_box",
+            "title": "Your Quick Start Checklist",
+            "items": [
+              "Complete your profile setup",
+              "Explore the dashboard",
+              "Create your first {{primary_action}}"
+            ]
+          },
+          {
+            "type": "text",
+            "content": "Need help? Reply to this email anytime - a real human will respond!"
+          }
+        ],
+        "closing": "Welcome aboard!",
+        "signature": "The {{product_name}} Team"
+      },
+      "cta_text": "Go to Dashboard",
+      "cta_url": "{{app_url}}/dashboard",
+      "tags": ["welcome", "day-0"]
+    },
+    {
+      "email_number": 2,
+      "send_day": 1,
+      "send_time": "09:00",
+      "subject": "{{first_name}}, here's your first win with {{product_name}}",
+      "preview_text": "Complete this 5-minute task to see immediate results.",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "text",
+            "content": "Yesterday you joined {{product_name}}. Today, let's get you your first win."
+          },
+          {
+            "type": "text",
+            "content": "The most successful users start by {{quick_win_action}}. It takes just 5 minutes and you'll immediately see the value."
+          },
+          {
+            "type": "steps",
+            "title": "Here's how:",
+            "items": [
+              {
+                "step": 1,
+                "text": "{{step_1_description}}"
+              },
+              {
+                "step": 2,
+                "text": "{{step_2_description}}"
+              },
+              {
+                "step": 3,
+                "text": "{{step_3_description}}"
+              }
+            ]
+          },
+          {
+            "type": "social_proof",
+            "content": "\"{{testimonial_quote}}\" - {{testimonial_name}}, {{testimonial_company}}"
+          }
+        ],
+        "closing": "You've got this!",
+        "signature": "{{sender_name}}\n{{sender_title}}"
+      },
+      "cta_text": "Get Your First Win",
+      "cta_url": "{{app_url}}/{{quick_win_url}}",
+      "tags": ["welcome", "day-1", "quick-win"]
+    },
+    {
+      "email_number": 3,
+      "send_day": 3,
+      "send_time": "10:00",
+      "subject": "The feature our users love most",
+      "preview_text": "Discover why {{feature_name}} is a game-changer.",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "text",
+            "content": "By now, you've had a chance to explore {{product_name}}. But have you discovered {{feature_name}} yet?"
+          },
+          {
+            "type": "text",
+            "content": "It's the feature our users rave about most, and here's why:"
+          },
+          {
+            "type": "benefits_list",
+            "items": [
+              "{{feature_benefit_1}}",
+              "{{feature_benefit_2}}",
+              "{{feature_benefit_3}}"
+            ]
+          },
+          {
+            "type": "video_preview",
+            "title": "Watch: {{feature_name}} in 2 Minutes",
+            "thumbnail_url": "{{video_thumbnail_url}}",
+            "video_url": "{{video_url}}"
+          },
+          {
+            "type": "text",
+            "content": "Try it out and let me know what you think!"
+          }
+        ],
+        "closing": "Happy exploring,",
+        "signature": "{{sender_name}}"
+      },
+      "cta_text": "Try {{feature_name}}",
+      "cta_url": "{{app_url}}/{{feature_url}}",
+      "tags": ["welcome", "day-3", "feature-highlight"]
+    },
+    {
+      "email_number": 4,
+      "send_day": 5,
+      "send_time": "11:00",
+      "subject": "{{first_name}}, quick question",
+      "preview_text": "I'd love to hear how your experience has been so far.",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "text",
+            "content": "I wanted to personally check in and see how things are going with {{product_name}}."
+          },
+          {
+            "type": "text",
+            "content": "Have you had a chance to {{primary_action}} yet? If you're running into any roadblocks, I'm here to help."
+          },
+          {
+            "type": "text",
+            "content": "A few things that might help:"
+          },
+          {
+            "type": "resource_list",
+            "items": [
+              {
+                "title": "Getting Started Guide",
+                "url": "{{docs_url}}/getting-started",
+                "description": "Step-by-step walkthrough"
+              },
+              {
+                "title": "Video Tutorials",
+                "url": "{{docs_url}}/videos",
+                "description": "Watch and learn"
+              },
+              {
+                "title": "Community Forum",
+                "url": "{{community_url}}",
+                "description": "Connect with other users"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "content": "Just reply to this email if you have any questions - I read every response."
+          }
+        ],
+        "closing": "Here to help,",
+        "signature": "{{sender_name}}\n{{sender_title}}"
+      },
+      "cta_text": "Reply with Questions",
+      "cta_url": "mailto:{{support_email}}",
+      "tags": ["welcome", "day-5", "check-in"]
+    },
+    {
+      "email_number": 5,
+      "send_day": 7,
+      "send_time": "10:00",
+      "subject": "You've been with us a week! Here's what's next",
+      "preview_text": "Celebrate your first week and unlock more powerful features.",
+      "body_template": {
+        "greeting": "Hi {{first_name}},",
+        "sections": [
+          {
+            "type": "celebration",
+            "content": "It's been one week since you joined {{product_name}}! 🎉"
+          },
+          {
+            "type": "stats_summary",
+            "title": "Your Week in Numbers",
+            "stats": [
+              {
+                "label": "{{stat_1_label}}",
+                "value": "{{stat_1_value}}"
+              },
+              {
+                "label": "{{stat_2_label}}",
+                "value": "{{stat_2_value}}"
+              },
+              {
+                "label": "{{stat_3_label}}",
+                "value": "{{stat_3_value}}"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "content": "Ready to take things to the next level? Here's what power users do next:"
+          },
+          {
+            "type": "next_steps",
+            "items": [
+              "{{advanced_feature_1}}",
+              "{{advanced_feature_2}}",
+              "{{advanced_feature_3}}"
+            ]
+          },
+          {
+            "type": "upgrade_prompt",
+            "condition": "{{is_free_user}}",
+            "content": "Unlock all features with our Pro plan - now 20% off for new users!"
+          }
+        ],
+        "closing": "Here's to many more wins!",
+        "signature": "The {{product_name}} Team"
+      },
+      "cta_text": "Explore Advanced Features",
+      "cta_url": "{{app_url}}/features",
+      "tags": ["welcome", "day-7", "milestone"]
+    }
+  ],
+  "settings": {
+    "unsubscribe_link": true,
+    "track_opens": true,
+    "track_clicks": true,
+    "send_timezone": "user_local",
+    "skip_weekends": false,
+    "exit_conditions": [
+      "user_converts_to_paid",
+      "user_unsubscribes",
+      "user_inactive_30_days"
+    ]
+  }
+}

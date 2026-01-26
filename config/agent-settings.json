@@ -1,0 +1,395 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "V4.0 Autonomous Factory - Agent Settings Configuration",
+
+  "version": "1.0.0",
+  "lastUpdated": "2025-01-26",
+
+  "agents": {
+    "orchestrator": {
+      "description": "Central coordinator that manages all other agents and workflows",
+      "model": {
+        "primary": "claude-opus-4-20250514",
+        "fallback": "claude-sonnet-4-20250514",
+        "emergency": "gemini-2.0-pro"
+      },
+      "parameters": {
+        "maxTokens": 8192,
+        "temperature": 0.3,
+        "topP": 0.9,
+        "topK": 40
+      },
+      "timeout": {
+        "requestMs": 120000,
+        "totalTaskMs": 600000
+      },
+      "capabilities": [
+        "task_decomposition",
+        "agent_spawning",
+        "progress_tracking",
+        "error_handling",
+        "resource_allocation"
+      ]
+    },
+
+    "researcher": {
+      "description": "Gathers information from web, APIs, and codebase analysis",
+      "model": {
+        "primary": "gemini-2.0-flash",
+        "fallback": "claude-sonnet-4-20250514",
+        "emergency": "glm-4-flash"
+      },
+      "parameters": {
+        "maxTokens": 4096,
+        "temperature": 0.5,
+        "topP": 0.95,
+        "topK": 50
+      },
+      "timeout": {
+        "requestMs": 60000,
+        "totalTaskMs": 300000
+      },
+      "capabilities": [
+        "web_search",
+        "api_queries",
+        "codebase_analysis",
+        "documentation_review",
+        "competitor_analysis"
+      ],
+      "restrictions": {
+        "readOnly": true,
+        "noCodeModification": true
+      }
+    },
+
+    "builder": {
+      "description": "Writes production code, creates components, implements features",
+      "model": {
+        "primary": "claude-sonnet-4-20250514",
+        "fallback": "claude-opus-4-20250514",
+        "emergency": "gemini-2.0-pro"
+      },
+      "parameters": {
+        "maxTokens": 16384,
+        "temperature": 0.2,
+        "topP": 0.85,
+        "topK": 30
+      },
+      "timeout": {
+        "requestMs": 180000,
+        "totalTaskMs": 900000
+      },
+      "capabilities": [
+        "code_generation",
+        "code_modification",
+        "file_creation",
+        "dependency_management",
+        "testing"
+      ],
+      "codeQuality": {
+        "requireTypeScript": true,
+        "requireTests": true,
+        "minTestCoverage": 70,
+        "lintOnSave": true,
+        "formatOnSave": true
+      }
+    },
+
+    "marketer": {
+      "description": "Creates marketing content, social media posts, landing pages",
+      "model": {
+        "primary": "claude-sonnet-4-20250514",
+        "fallback": "gemini-2.0-flash",
+        "emergency": "grok-2"
+      },
+      "parameters": {
+        "maxTokens": 4096,
+        "temperature": 0.7,
+        "topP": 0.95,
+        "topK": 60
+      },
+      "timeout": {
+        "requestMs": 60000,
+        "totalTaskMs": 300000
+      },
+      "capabilities": [
+        "copywriting",
+        "social_media",
+        "email_campaigns",
+        "landing_pages",
+        "seo_optimization"
+      ],
+      "contentGuidelines": {
+        "toneOfVoice": "professional_friendly",
+        "maxPostLength": {
+          "twitter": 280,
+          "linkedin": 3000,
+          "email_subject": 60
+        }
+      }
+    },
+
+    "operator": {
+      "description": "Handles deployments, monitoring, and operational tasks",
+      "model": {
+        "primary": "claude-sonnet-4-20250514",
+        "fallback": "gemini-2.0-flash",
+        "emergency": "glm-4-flash"
+      },
+      "parameters": {
+        "maxTokens": 4096,
+        "temperature": 0.1,
+        "topP": 0.8,
+        "topK": 20
+      },
+      "timeout": {
+        "requestMs": 90000,
+        "totalTaskMs": 600000
+      },
+      "capabilities": [
+        "deployment",
+        "monitoring",
+        "alerting",
+        "log_analysis",
+        "performance_tuning"
+      ],
+      "permissions": {
+        "canDeploy": true,
+        "canRollback": true,
+        "canModifyInfra": false,
+        "requiresApprovalForProd": true
+      }
+    }
+  },
+
+  "subagentDefaults": {
+    "$comment": "Default settings for dynamically spawned subagents",
+    "model": {
+      "primary": "gemini-2.0-flash",
+      "fallback": "glm-4-flash"
+    },
+    "parameters": {
+      "maxTokens": 2048,
+      "temperature": 0.3,
+      "topP": 0.9,
+      "topK": 40
+    },
+    "timeout": {
+      "requestMs": 30000,
+      "totalTaskMs": 120000
+    },
+    "maxSubagentsPerAgent": 5,
+    "inheritParentContext": true
+  },
+
+  "retryPolicy": {
+    "maxAttempts": 3,
+    "backoffStrategy": "exponential",
+    "backoffSettings": {
+      "initialDelayMs": 1000,
+      "maxDelayMs": 30000,
+      "multiplier": 2,
+      "jitterFactor": 0.1
+    },
+    "retryableErrors": [
+      "rate_limit_exceeded",
+      "timeout",
+      "service_unavailable",
+      "internal_server_error",
+      "connection_reset"
+    ],
+    "nonRetryableErrors": [
+      "invalid_api_key",
+      "insufficient_quota",
+      "content_policy_violation",
+      "invalid_request"
+    ]
+  },
+
+  "parallelismLimits": {
+    "global": {
+      "maxConcurrentAgents": 8,
+      "maxConcurrentRequests": 20,
+      "maxQueueSize": 100
+    },
+    "perModel": {
+      "claude-opus-4-20250514": {
+        "maxConcurrent": 2,
+        "requestsPerMinute": 10
+      },
+      "claude-sonnet-4-20250514": {
+        "maxConcurrent": 5,
+        "requestsPerMinute": 50
+      },
+      "gemini-2.0-pro": {
+        "maxConcurrent": 3,
+        "requestsPerMinute": 30
+      },
+      "gemini-2.0-flash": {
+        "maxConcurrent": 10,
+        "requestsPerMinute": 100
+      },
+      "grok-2": {
+        "maxConcurrent": 3,
+        "requestsPerMinute": 20
+      },
+      "glm-4-flash": {
+        "maxConcurrent": 10,
+        "requestsPerMinute": 200
+      }
+    }
+  },
+
+  "rateLimitHandling": {
+    "strategy": "adaptive",
+    "settings": {
+      "monitorWindow": 60000,
+      "warningThreshold": 0.8,
+      "backoffThreshold": 0.9,
+      "autoSwitchToFallback": true,
+      "cooldownPeriodMs": 60000
+    },
+    "headerParsing": {
+      "enabled": true,
+      "rateLimitHeader": "x-ratelimit-limit",
+      "remainingHeader": "x-ratelimit-remaining",
+      "resetHeader": "x-ratelimit-reset"
+    }
+  },
+
+  "errorEscalation": {
+    "levels": {
+      "info": {
+        "logOnly": true,
+        "notify": false
+      },
+      "warning": {
+        "logOnly": false,
+        "notify": true,
+        "channels": ["dashboard"]
+      },
+      "error": {
+        "logOnly": false,
+        "notify": true,
+        "channels": ["dashboard", "telegram"],
+        "retryBeforeEscalate": true
+      },
+      "critical": {
+        "logOnly": false,
+        "notify": true,
+        "channels": ["dashboard", "telegram", "email"],
+        "pauseAgent": true,
+        "requireManualResolution": true
+      }
+    },
+    "escalationRules": [
+      {
+        "condition": "consecutive_failures >= 3",
+        "escalateTo": "error"
+      },
+      {
+        "condition": "error_rate > 0.5 in last 10 requests",
+        "escalateTo": "critical"
+      },
+      {
+        "condition": "all_models_failed",
+        "escalateTo": "critical"
+      },
+      {
+        "condition": "budget_exceeded",
+        "escalateTo": "critical"
+      }
+    ]
+  },
+
+  "logging": {
+    "verbosity": {
+      "default": "info",
+      "agents": {
+        "orchestrator": "info",
+        "researcher": "debug",
+        "builder": "info",
+        "marketer": "info",
+        "operator": "debug"
+      }
+    },
+    "levels": ["debug", "info", "warn", "error", "critical"],
+    "output": {
+      "console": {
+        "enabled": true,
+        "minLevel": "info",
+        "colorize": true,
+        "timestamp": true
+      },
+      "file": {
+        "enabled": true,
+        "minLevel": "debug",
+        "path": "./logs",
+        "rotationSize": "10MB",
+        "maxFiles": 10
+      },
+      "database": {
+        "enabled": true,
+        "minLevel": "warn",
+        "tableName": "agent_logs",
+        "retentionDays": 30
+      }
+    },
+    "includeInLogs": {
+      "requestId": true,
+      "agentId": true,
+      "modelUsed": true,
+      "tokenCount": true,
+      "costEstimate": true,
+      "latencyMs": true,
+      "errorStack": true
+    },
+    "excludeFromLogs": [
+      "api_keys",
+      "user_passwords",
+      "payment_details",
+      "session_tokens"
+    ]
+  },
+
+  "contextManagement": {
+    "maxContextTokens": {
+      "orchestrator": 128000,
+      "researcher": 64000,
+      "builder": 128000,
+      "marketer": 32000,
+      "operator": 64000
+    },
+    "contextPruningStrategy": "relevance_score",
+    "preserveSystemPrompt": true,
+    "preserveRecentMessages": 10,
+    "summarizeOldContext": true
+  },
+
+  "healthChecks": {
+    "enabled": true,
+    "intervalMs": 300000,
+    "checks": [
+      {
+        "name": "api_connectivity",
+        "type": "ping",
+        "endpoints": ["anthropic", "google", "xai"]
+      },
+      {
+        "name": "quota_status",
+        "type": "quota_check",
+        "warningThreshold": 0.2
+      },
+      {
+        "name": "response_latency",
+        "type": "latency",
+        "maxAcceptableMs": 5000
+      }
+    ],
+    "onFailure": {
+      "retryCount": 2,
+      "notifyAfterFailures": 3,
+      "switchToFallback": true
+    }
+  }
+}
