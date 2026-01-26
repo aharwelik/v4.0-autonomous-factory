@@ -165,13 +165,14 @@ const services: Service[] = [
       { key: "VERCEL_TOKEN", label: "Token", placeholder: "your_vercel_token", secret: true }
     ],
     steps: [
-      "Click 'Get Key' - opens Vercel",
-      "Sign up with GitHub (easiest) or email",
-      "Click your profile picture → Settings",
-      "Click 'Tokens' in left sidebar",
-      "Click 'Create' button",
-      "Give it a name like 'app-factory'",
-      "Copy the token and paste below"
+      "Click 'Get Key' below - opens Vercel Tokens page",
+      "Sign up with GitHub (easiest) or email if you don't have an account",
+      "⚠️ IMPORTANT: Vercel will show you setup instructions, code snippets, framework selection, etc.",
+      "❌ IGNORE ALL OF THAT - you don't need any of it!",
+      "✅ Just look for 'Create' or 'Create Token' button",
+      "Give it any name (like 'app-factory')",
+      "Copy the token that appears (starts with a bunch of random letters)",
+      "Paste it below and click Save - that's all you need!"
     ],
     signupUrl: "https://vercel.com/account/tokens",
   },

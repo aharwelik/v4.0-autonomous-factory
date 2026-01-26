@@ -483,6 +483,9 @@ export default function Dashboard() {
                         <p className="text-sm font-medium text-white mb-2">
                           ❶ Pick ONE AI Provider (required to build):
                         </p>
+                        <p className="text-xs text-gray-400 mb-2">
+                          <strong>What is this?</strong> AI writes all the code for your app. Without this, nothing works.
+                        </p>
                         <div className="space-y-2">
                           {preflightStatus.aiOptions.map((opt) => (
                             <div key={opt.key} className="flex items-center justify-between bg-gray-800/50 rounded p-2">
@@ -491,14 +494,18 @@ export default function Dashboard() {
                                 {opt.free && <Badge className="bg-green-600 text-xs">FREE</Badge>}
                                 {opt.recommended && <Badge className="bg-blue-600 text-xs">Recommended</Badge>}
                               </div>
-                              <a
-                                href={opt.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                onClick={() => {
+                                  window.open(opt.url, "_blank");
+                                  // Scroll to setup section after a short delay
+                                  setTimeout(() => {
+                                    document.getElementById("quick-setup")?.scrollIntoView({ behavior: "smooth" });
+                                  }, 500);
+                                }}
                                 className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition-colors"
                               >
                                 Get Key →
-                              </a>
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -511,6 +518,9 @@ export default function Dashboard() {
                         <p className="text-sm font-medium text-white mb-2">
                           ❷ Pick ONE Hosting Provider (required to publish):
                         </p>
+                        <p className="text-xs text-gray-400 mb-2">
+                          <strong>What is this?</strong> Where your app lives online so people can use it. You just need a token/key.
+                        </p>
                         <div className="space-y-2">
                           {preflightStatus.deployOptions.map((opt) => (
                             <div key={opt.key} className="flex items-center justify-between bg-gray-800/50 rounded p-2">
@@ -519,23 +529,30 @@ export default function Dashboard() {
                                 {opt.free && <Badge className="bg-green-600 text-xs">FREE</Badge>}
                                 {opt.recommended && <Badge className="bg-blue-600 text-xs">Recommended</Badge>}
                               </div>
-                              <a
-                                href={opt.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                onClick={() => {
+                                  window.open(opt.url, "_blank");
+                                  // Scroll to setup section after a short delay
+                                  setTimeout(() => {
+                                    document.getElementById("quick-setup")?.scrollIntoView({ behavior: "smooth" });
+                                  }, 500);
+                                }}
                                 className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition-colors"
                               >
                                 Get Key →
-                              </a>
+                              </button>
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    <p className={`text-sm ${!preflightStatus.canBuild ? "text-red-300/80" : "text-yellow-300/80"}`}>
-                      👇 After getting your keys, scroll down to "Quick Setup" to save them
-                    </p>
+                    <button
+                      onClick={() => document.getElementById("quick-setup")?.scrollIntoView({ behavior: "smooth" })}
+                      className={`text-sm underline cursor-pointer hover:no-underline ${!preflightStatus.canBuild ? "text-red-300/80 hover:text-red-200" : "text-yellow-300/80 hover:text-yellow-200"}`}
+                    >
+                      👇 Click here to go to Quick Setup and save your keys
+                    </button>
                   </div>
                 </div>
               </CardContent>
