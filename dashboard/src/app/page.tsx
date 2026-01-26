@@ -125,15 +125,14 @@ export default function Dashboard() {
 
     // First check if we can build
     if (!preflightStatus?.canBuild) {
-      addLog("");
+      setLogs([]);
       addLog("🔴 SETUP REQUIRED");
       addLog("═══════════════════════════════════════════════════════");
       addLog("You need to configure an AI API key before building.");
       addLog("");
-      addLog("Missing:");
       preflightStatus?.blockers.forEach(b => {
-        addLog(`   ❌ ${b.name}`);
-        addLog(`      Get it here: ${b.howToGet}`);
+        addLog(`❌ ${b.name}`);
+        addLog(`   Get it here: ${b.howToGet}`);
       });
       addLog("");
       addLog("👇 Scroll down to 'Quick Setup' and add your API keys");
@@ -142,147 +141,194 @@ export default function Dashboard() {
 
     setIsProcessing(true);
     setLogs([]);
-
-    // Phase 1: Understanding
     setCurrentPhase("understanding");
-    addLog("🎯 STEP 1: Understanding Your Idea");
-    addLog("═══════════════════════════════════════════════════════");
-    addLog(`📝 Input: "${idea.slice(0, 100)}${idea.length > 100 ? "..." : ""}"`);
-    addLog("");
-    addLog("📤 Sending to AI for validation...");
 
+    // Use streaming API for real-time progress
     try {
-      const response = await fetch("/api/build", {
+      const response = await fetch("/api/build/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          idea,
-          runInBackground,
-        }),
+        body: JSON.stringify({ idea }),
       });
 
-      const result = await response.json();
-
-      if (!result.success) {
-        if (result.needsSetup) {
-          setCurrentPhase("ready");
-          addLog("");
-          addLog("🔴 API KEY REQUIRED");
-          addLog("═══════════════════════════════════════════════════════");
-          addLog(result.error);
-          addLog("");
-          addLog("👇 Scroll down to 'Quick Setup' and add your Gemini API key (FREE!)");
-          setIsProcessing(false);
-          fetchPreflight(); // Refresh status
-          return;
-        }
-        throw new Error(result.error || "Build failed");
+      if (!response.ok) {
+        throw new Error("Failed to start build");
       }
 
-      // Phase 2: Show validation results
-      setCurrentPhase("validation");
-      addLog("✅ AI Response Received!");
-      addLog("");
-      addLog("🔍 STEP 2: Validation Results");
-      addLog("═══════════════════════════════════════════════════════");
-      addLog(`💾 Idea ID: ${result.ideaId}`);
-      addLog("");
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
 
-      if (result.validation) {
-        // Score with visual bar
-        const score = result.validation.score || 0;
-        const scoreBar = "█".repeat(Math.floor(score / 10)) + "░".repeat(10 - Math.floor(score / 10));
-        addLog(`📊 Score: [${scoreBar}] ${score}/100`);
-        addLog("");
+      if (!reader) {
+        throw new Error("No response stream");
+      }
 
-        addLog("📋 Analysis Details:");
-        addLog(`   🎯 Target Audience: ${result.validation.targetAudience || "N/A"}`);
-        addLog(`   💰 Suggested Price: $${result.validation.targetPrice || 19}/month`);
-        addLog(`   🏗️ Complexity: ${result.validation.buildComplexity || "medium"}`);
-        addLog(`   📈 Recommendation: ${result.validation.recommendation || "CONSIDER"}`);
+      let buffer = "";
 
-        if (result.validation.competitors?.length > 0) {
-          addLog("");
-          addLog("🏢 Competitors Found:");
-          result.validation.competitors.forEach((c: string) => addLog(`   • ${c}`));
-        }
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-        if (result.validation.concerns?.length > 0) {
-          addLog("");
-          addLog("⚠️ Concerns to Address:");
-          result.validation.concerns.forEach((c: string) => addLog(`   • ${c}`));
-        }
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
 
-        if (result.validation.coreFeatures?.length > 0) {
-          addLog("");
-          addLog("✨ Core Features to Build:");
-          result.validation.coreFeatures.forEach((f: string) => addLog(`   • ${f}`));
-        }
+        for (const line of lines) {
+          if (!line.trim()) continue;
 
-        if (result.validation.appName) {
-          addLog("");
-          addLog(`📱 Suggested App Name: "${result.validation.appName}"`);
-          if (result.validation.tagline) {
-            addLog(`   "${result.validation.tagline}"`);
+          const eventMatch = line.match(/event: (\w+)/);
+          const dataMatch = line.match(/data: (.+)/s);
+
+          if (eventMatch && dataMatch) {
+            const event = eventMatch[1];
+            const data = JSON.parse(dataMatch[1]);
+
+            switch (event) {
+              case "step":
+                if (data.status === "running") {
+                  addLog("");
+                  addLog(`━━━ STEP ${data.step}/${data.total}: ${data.title} ━━━`);
+                  addLog(`    ${data.detail}`);
+                  // Update phase based on step
+                  if (data.step <= 2) setCurrentPhase("understanding");
+                  else if (data.step <= 4) setCurrentPhase("validation");
+                  else setCurrentPhase("ready");
+                } else if (data.status === "complete") {
+                  addLog(`    ✅ ${data.detail}`);
+                } else if (data.status === "failed") {
+                  addLog(`    ❌ ${data.detail}`);
+                }
+                break;
+
+              case "thinking":
+                addLog("");
+                addLog(`💭 ${data.thought}`);
+                if (data.details) {
+                  data.details.forEach((d: string) => addLog(`    ${d}`));
+                }
+                break;
+
+              case "progress":
+                addLog(`    → ${data.message}`);
+                break;
+
+              case "validation":
+                addLog("");
+                addLog("═══════════════════════════════════════════════════════");
+                addLog("📊 VALIDATION RESULTS");
+                addLog("═══════════════════════════════════════════════════════");
+
+                const score = data.score || 0;
+                const bar = "█".repeat(Math.floor(score / 10)) + "░".repeat(10 - Math.floor(score / 10));
+                addLog(`Score: [${bar}] ${score}/100`);
+                addLog(`Recommendation: ${data.recommendation}`);
+                addLog("");
+
+                addLog(`📱 App Name: "${data.appName}"`);
+                addLog(`   "${data.tagline}"`);
+                addLog("");
+
+                addLog(`🎯 Target: ${data.targetAudience}`);
+                addLog(`💰 Price: $${data.targetPrice}/month`);
+                addLog(`🏗️ Complexity: ${data.buildComplexity}`);
+                addLog(`📈 Market: ${data.marketSize || "Unknown"}`);
+                addLog(`💵 Monetization: ${data.monetization || "Subscription"}`);
+
+                if (data.strengths?.length > 0) {
+                  addLog("");
+                  addLog("✅ Strengths:");
+                  data.strengths.forEach((s: string) => addLog(`    • ${s}`));
+                }
+
+                if (data.competitors?.length > 0) {
+                  addLog("");
+                  addLog("🏢 Competitors:");
+                  data.competitors.forEach((c: string) => addLog(`    • ${c}`));
+                }
+
+                if (data.concerns?.length > 0) {
+                  addLog("");
+                  addLog("⚠️ Concerns:");
+                  data.concerns.forEach((c: string) => addLog(`    • ${c}`));
+                }
+
+                if (data.coreFeatures?.length > 0) {
+                  addLog("");
+                  addLog("✨ Core Features to Build:");
+                  data.coreFeatures.forEach((f: string) => addLog(`    • ${f}`));
+                }
+                addLog("═══════════════════════════════════════════════════════");
+                break;
+
+              case "result":
+                addLog("");
+                if (data.phase === "queued") {
+                  addLog("🚀 BUILD APPROVED & QUEUED!");
+                  addLog(`    Job ID: ${data.jobId}`);
+                  addLog(`    AI Provider: ${data.provider}`);
+                  addLog("");
+                  addLog("📦 Next Steps:");
+                  data.nextSteps?.forEach((s: string) => addLog(`    → ${s}`));
+                  addLog("");
+                  addLog("👉 Click the 'Build' tab below to watch live progress!");
+
+                  setActiveJobId(data.jobId);
+                  setShowBuildVisual(true);
+
+                  if (!preflightStatus?.canDeploy) {
+                    addLog("");
+                    addLog("💡 TIP: Add Vercel/Hostinger in Setup to auto-deploy");
+                  }
+                } else if (data.phase === "rejected") {
+                  addLog("❌ IDEA NOT APPROVED");
+                  addLog("");
+                  addLog(data.message);
+                  addLog("");
+                  addLog("💡 Try revising your idea and resubmitting!");
+                }
+                break;
+
+              case "error":
+                addLog("");
+                addLog("═══════════════════════════════════════════════════════");
+                addLog(`❌ ERROR: ${data.message}`);
+                addLog("═══════════════════════════════════════════════════════");
+
+                if (data.fixes) {
+                  data.fixes.forEach((fix: { problem: string; solution: string; options?: Array<{ name: string; where: string; url: string }> }) => {
+                    addLog("");
+                    addLog(`🔧 Problem: ${fix.problem}`);
+                    addLog(`   Solution: ${fix.solution}`);
+                    if (fix.options) {
+                      addLog("");
+                      addLog("   Pick ONE of these:");
+                      fix.options.forEach((opt: { name: string; where: string; url: string }) => {
+                        addLog(`   • ${opt.name}`);
+                        addLog(`     Where: ${opt.where}`);
+                        addLog(`     Get key: ${opt.url}`);
+                      });
+                    }
+                  });
+                }
+
+                if (data.needsSetup) {
+                  addLog("");
+                  addLog("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                  addLog("👇 SCROLL DOWN to 'Quick Setup' section");
+                  addLog("   Click the service name → Enter your key → Click Save");
+                  addLog("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                  fetchPreflight();
+                }
+                break;
+
+              case "complete":
+                setCurrentPhase("ready");
+                break;
+            }
           }
         }
       }
 
-      // Phase 3: Show next steps based on result
-      addLog("");
-      setCurrentPhase("ready");
-
-      if (result.phase === "queued") {
-        addLog("🚀 STEP 3: Build Queued!");
-        addLog("═══════════════════════════════════════════════════════");
-        addLog("");
-        addLog(`🔧 Job ID: ${result.jobId}`);
-        addLog(`🤖 AI Provider: ${result.validation?.provider || "Gemini"}`);
-        addLog("");
-        addLog("📦 What's Happening Now:");
-        addLog("   1. AI is generating app specification...");
-        addLog("   2. Creating all code files...");
-        addLog("   3. Setting up project structure...");
-        addLog("   4. Saving to /generated-apps/");
-        addLog("");
-        addLog("👉 Click the 'Build' tab below to watch live progress!");
-        addLog("");
-
-        if (!preflightStatus?.canDeploy) {
-          addLog("💡 TIP: Add Vercel token in Setup for auto-deployment");
-        }
-
-        // Set job ID for visual tracking
-        setActiveJobId(result.jobId);
-        setShowBuildVisual(true);
-
-      } else if (result.phase === "validation" && !result.validation?.isViable) {
-        addLog("❌ IDEA DID NOT PASS VALIDATION");
-        addLog("═══════════════════════════════════════════════════════");
-        addLog("");
-        addLog("The AI thinks this idea may struggle to reach $10k MRR.");
-        addLog("");
-        addLog("💡 Suggestions:");
-        addLog("   • Make the target audience more specific");
-        addLog("   • Focus on a unique angle competitors miss");
-        addLog("   • Consider a higher price point for premium features");
-        addLog("");
-        addLog("Try refining your idea and submit again!");
-
-      } else {
-        addLog("✅ VALIDATION COMPLETE");
-        addLog("═══════════════════════════════════════════════════════");
-        addLog("");
-        addLog("Your idea passed validation!");
-        if (result.buildCommand) {
-          addLog("");
-          addLog("To build manually, run:");
-          addLog(`   ${result.buildCommand}`);
-        }
-      }
-
     } catch (error) {
-      setCurrentPhase("ready");
       addLog("");
       addLog("❌ ERROR OCCURRED");
       addLog("═══════════════════════════════════════════════════════");
@@ -291,11 +337,11 @@ export default function Dashboard() {
       addLog("💡 Troubleshooting:");
       addLog("   • Check your API key is valid in Setup");
       addLog("   • Try refreshing the page");
-      addLog("   • Check browser console for details");
     }
 
     setIsProcessing(false);
-    fetchData(); // Refresh dashboard data
+    setCurrentPhase("ready");
+    fetchData();
   };
 
   const phases = [

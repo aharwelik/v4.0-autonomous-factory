@@ -14,6 +14,7 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  Trash2,
 } from "lucide-react";
 
 interface Service {
@@ -307,6 +308,37 @@ export function SetupGuide({ onKeySaved }: SetupGuideProps = {}) {
     }
   };
 
+  // Delete a saved key
+  const deleteKey = async (service: Service) => {
+    if (!confirm(`Delete ${service.name} API key? You'll need to add it again to use this service.`)) {
+      return;
+    }
+
+    try {
+      // Clear from backend by sending empty value
+      const response = await fetch("/api/settings/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: service.envVar }),
+      });
+
+      if (response.ok) {
+        // Clear local state
+        setApiKeys((prev) => {
+          const next = { ...prev };
+          delete next[service.envVar];
+          return next;
+        });
+        setSavedKeys((prev) => ({ ...prev, [service.envVar]: false }));
+        setValidated((prev) => ({ ...prev, [service.envVar]: null }));
+        // Notify parent
+        onKeySaved?.();
+      }
+    } catch {
+      alert("Failed to delete key");
+    }
+  };
+
   const openSignup = (url: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
   };
@@ -475,6 +507,17 @@ export function SetupGuide({ onKeySaved }: SetupGuideProps = {}) {
                       </>
                     )}
                   </Button>
+                  {/* Delete button - only show if key is saved */}
+                  {savedKeys[service.envVar] && (
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => deleteKey(service)}
+                      title="Delete this key"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
 
                 {/* Validation feedback */}
