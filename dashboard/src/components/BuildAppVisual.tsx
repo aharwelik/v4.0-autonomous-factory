@@ -52,11 +52,16 @@ export default function BuildAppVisual({ jobId, idea, onComplete }: BuildAppVisu
     ));
   };
 
-  // Poll for build status
+  // Track if we already triggered the build
+  const [buildTriggered, setBuildTriggered] = useState(false);
+
+  // Poll for build status AND trigger build if queued
   useEffect(() => {
     if (!jobId) return;
 
     setIsBuilding(true);
+    addLog("Checking build job status...");
+
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch(`/api/build?jobId=${jobId}`);
@@ -67,8 +72,32 @@ export default function BuildAppVisual({ jobId, idea, onComplete }: BuildAppVisu
 
           // Update steps based on job status
           if (job.status === "queued") {
-            updateStep(0, "running");
-            addLog("Starting validation...");
+            updateStep(0, "completed"); // Validation already done by stream API
+            updateStep(1, "running");
+            addLog("Job queued - starting build processor...");
+
+            // AUTO-TRIGGER the build processor if not already triggered
+            if (!buildTriggered) {
+              setBuildTriggered(true);
+              addLog("🚀 Triggering AI build with Gemini...");
+
+              // Call the build processor
+              fetch("/api/build/process", { method: "POST" })
+                .then(r => r.json())
+                .then(processData => {
+                  if (processData.success) {
+                    addLog(`✅ Build complete: ${processData.appName}`);
+                    addLog(`📁 Files: ${processData.filesGenerated?.length || 0} generated`);
+                  } else if (processData.message?.includes("No pending")) {
+                    addLog("⏳ Waiting for build to complete...");
+                  } else {
+                    addLog(`⚠️ ${processData.error || processData.message}`);
+                  }
+                })
+                .catch(err => {
+                  addLog(`❌ Build error: ${err.message}`);
+                });
+            }
           } else if (job.status === "running") {
             // Progress through steps
             if (currentStep < 3) {
@@ -105,7 +134,7 @@ export default function BuildAppVisual({ jobId, idea, onComplete }: BuildAppVisu
     }, 2000);
 
     return () => clearInterval(pollInterval);
-  }, [jobId, currentStep, onComplete]);
+  }, [jobId, currentStep, onComplete, buildTriggered]);
 
   // Start build process
   const startBuild = async () => {
