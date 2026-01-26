@@ -1,449 +1,538 @@
 #!/bin/bash
 # =============================================================================
-# App Factory v4.0 - One-Click Setup Script
+# App Factory v4.0 - FULLY AUTOMATED Setup Script
 # =============================================================================
-# This script sets up everything you need to run the Autonomous App Factory
-# Run: chmod +x setup.sh && ./setup.sh
+# ONE COMMAND TO RULE THEM ALL
+# Run: curl -sSL https://raw.githubusercontent.com/aharwelik/v4.0-autonomous-factory/main/scripts/setup.sh | bash
+# Or:  chmod +x setup.sh && ./setup.sh
 # =============================================================================
 
-set -e  # Exit on any error
+set -e
 
-# Colors for output
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+CYAN='\033[0;36m'
+NC='\033[0m'
 
-# Print with color
 print_status() { echo -e "${BLUE}[*]${NC} $1"; }
 print_success() { echo -e "${GREEN}[✓]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[!]${NC} $1"; }
 print_error() { echo -e "${RED}[✗]${NC} $1"; }
+print_header() { echo -e "\n${CYAN}═══════════════════════════════════════════════════════════${NC}"; echo -e "${CYAN}  $1${NC}"; echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}\n"; }
 
-# Header
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT"
+
 echo ""
-echo "=========================================="
-echo "    🏭 App Factory v4.0 Setup"
-echo "=========================================="
+echo "  ██████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗████████╗ ██████╗ ██████╗ ██╗   ██╗"
+echo "  ██╔══██╗██╔══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗╚██╗ ██╔╝"
+echo "  ███████║██████╔╝██████╔╝    █████╗  ███████║██║        ██║   ██║   ██║██████╔╝ ╚████╔╝ "
+echo "  ██╔══██║██╔═══╝ ██╔═══╝     ██╔══╝  ██╔══██║██║        ██║   ██║   ██║██╔══██╗  ╚██╔╝  "
+echo "  ██║  ██║██║     ██║         ██║     ██║  ██║╚██████╗   ██║   ╚██████╔╝██║  ██║   ██║   "
+echo "  ╚═╝  ╚═╝╚═╝     ╚═╝         ╚═╝     ╚═╝  ╚═╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝   ╚═╝   "
+echo ""
+echo "  Autonomous App Factory v4.0 - FULLY AUTOMATED SETUP"
 echo ""
 
-# -----------------------------------------------------------------------------
-# Step 1: Check Prerequisites
-# -----------------------------------------------------------------------------
-print_status "Checking prerequisites..."
+# =============================================================================
+# STEP 1: PREREQUISITES
+# =============================================================================
+print_header "STEP 1: Checking Prerequisites"
 
-# Check Node.js
+# Check OS
+OS="$(uname -s)"
+case "$OS" in
+    Linux*)     OS_TYPE=Linux;;
+    Darwin*)    OS_TYPE=Mac;;
+    CYGWIN*|MINGW*) OS_TYPE=Windows;;
+    *)          OS_TYPE="Unknown";;
+esac
+print_success "Detected OS: $OS_TYPE"
+
+# Check/Install Node.js
 if command -v node &> /dev/null; then
-    NODE_VERSION=$(node --version)
-    print_success "Node.js installed: $NODE_VERSION"
+    NODE_VERSION=$(node --version | sed 's/v//')
+    NODE_MAJOR=$(echo $NODE_VERSION | cut -d. -f1)
+    if [ "$NODE_MAJOR" -ge 18 ]; then
+        print_success "Node.js $NODE_VERSION installed"
+    else
+        print_warning "Node.js $NODE_VERSION is old. Upgrading..."
+        if [ "$OS_TYPE" = "Mac" ]; then
+            brew install node@20 || curl -fsSL https://fnm.vercel.app/install | bash && fnm install 20
+        else
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs
+        fi
+    fi
 else
-    print_error "Node.js not found. Please install from https://nodejs.org"
-    exit 1
+    print_status "Installing Node.js..."
+    if [ "$OS_TYPE" = "Mac" ]; then
+        if command -v brew &> /dev/null; then
+            brew install node
+        else
+            curl -fsSL https://fnm.vercel.app/install | bash
+            source ~/.bashrc 2>/dev/null || source ~/.zshrc 2>/dev/null
+            fnm install 20
+        fi
+    else
+        curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+    fi
+    print_success "Node.js installed"
 fi
 
-# Check npm
-if command -v npm &> /dev/null; then
-    NPM_VERSION=$(npm --version)
-    print_success "npm installed: $NPM_VERSION"
-else
-    print_error "npm not found. Please reinstall Node.js"
-    exit 1
-fi
-
-# Check Git
+# Check/Install Git
 if command -v git &> /dev/null; then
-    GIT_VERSION=$(git --version)
-    print_success "Git installed: $GIT_VERSION"
+    print_success "Git installed: $(git --version | cut -d' ' -f3)"
 else
-    print_warning "Git not found. Some features may not work."
+    print_status "Installing Git..."
+    if [ "$OS_TYPE" = "Mac" ]; then
+        xcode-select --install 2>/dev/null || brew install git
+    else
+        sudo apt-get install -y git
+    fi
 fi
 
-# Check Claude Code
+# =============================================================================
+# STEP 2: INSTALL GLOBAL TOOLS
+# =============================================================================
+print_header "STEP 2: Installing Global Tools"
+
+# Install Claude Code
 if command -v claude &> /dev/null; then
-    print_success "Claude Code installed"
+    print_success "Claude Code already installed"
 else
     print_status "Installing Claude Code..."
     npm install -g @anthropic-ai/claude-code
     print_success "Claude Code installed"
 fi
 
-echo ""
-
-# -----------------------------------------------------------------------------
-# Step 2: Check Environment Variables
-# -----------------------------------------------------------------------------
-print_status "Checking environment variables..."
-
-# Load .env if it exists
-if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
-    print_success ".env file found"
+# Install n8n globally
+if command -v n8n &> /dev/null; then
+    print_success "n8n already installed"
 else
-    print_warning ".env file not found. Creating template..."
-    cat > .env << 'EOF'
+    print_status "Installing n8n (workflow automation)..."
+    npm install -g n8n
+    print_success "n8n installed"
+fi
+
+# Install PM2 for process management
+if command -v pm2 &> /dev/null; then
+    print_success "PM2 already installed"
+else
+    print_status "Installing PM2 (process manager)..."
+    npm install -g pm2
+    print_success "PM2 installed"
+fi
+
 # =============================================================================
-# App Factory v4.0 - Environment Variables
+# STEP 3: PROJECT DEPENDENCIES
+# =============================================================================
+print_header "STEP 3: Installing Project Dependencies"
+
+# Dashboard dependencies
+if [ -d "dashboard" ]; then
+    print_status "Installing dashboard dependencies..."
+    cd dashboard
+    npm install
+    cd "$PROJECT_ROOT"
+    print_success "Dashboard dependencies installed"
+fi
+
+# =============================================================================
+# STEP 4: ENVIRONMENT SETUP
+# =============================================================================
+print_header "STEP 4: Environment Configuration"
+
+# Create .env if it doesn't exist
+if [ ! -f ".env" ]; then
+    print_status "Creating .env file..."
+    cat > .env << 'ENVEOF'
+# =============================================================================
+# APP FACTORY v4.0 - ENVIRONMENT CONFIGURATION
+# =============================================================================
+# Fill in your API keys below. Most have FREE tiers!
 # =============================================================================
 
-# REQUIRED - Get from https://console.anthropic.com
-ANTHROPIC_API_KEY=
+# ─────────────────────────────────────────────────────────────────────────────
+# AI PROVIDERS (at least one required)
+# ─────────────────────────────────────────────────────────────────────────────
 
-# REQUIRED - Get from https://ai.google.dev
+# Google Gemini - FREE! (1M tokens/day)
+# Get at: https://aistudio.google.com/app/apikey
 GEMINI_API_KEY=
 
-# REQUIRED - Get from https://vercel.com/account/tokens
+# Anthropic Claude - $5 free credit
+# Get at: https://console.anthropic.com
+ANTHROPIC_API_KEY=
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DEPLOYMENT (required for deploying apps)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Vercel - FREE unlimited deploys
+# Get at: https://vercel.com/account/tokens
 VERCEL_TOKEN=
 
-# REQUIRED - Get from Telegram @BotFather
+# ─────────────────────────────────────────────────────────────────────────────
+# DATABASE (required for persistence)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Neon - FREE 512MB PostgreSQL
+# Get at: https://console.neon.tech
+DATABASE_URL=
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AUTHENTICATION (required for user auth)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Clerk - FREE 10,000 users
+# Get at: https://dashboard.clerk.com
+CLERK_SECRET_KEY=
+CLERK_PUBLISHABLE_KEY=
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NOTIFICATIONS (optional but recommended)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Telegram - FREE unlimited
+# Get at: https://t.me/BotFather
 TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
 
-# OPTIONAL - Get from https://capsolver.com
-CAPSOLVER_API_KEY=
+# ─────────────────────────────────────────────────────────────────────────────
+# PAYMENTS (optional)
+# ─────────────────────────────────────────────────────────────────────────────
 
-# OPTIONAL - Get from https://stripe.com (for payments)
+# Stripe - No monthly fee
+# Get at: https://dashboard.stripe.com/apikeys
 STRIPE_SECRET_KEY=
 STRIPE_PUBLISHABLE_KEY=
 
-# OPTIONAL - Grok API from https://x.ai
-XAI_API_KEY=
+# ─────────────────────────────────────────────────────────────────────────────
+# ANALYTICS (optional)
+# ─────────────────────────────────────────────────────────────────────────────
 
-# OPTIONAL - GLM API from https://open.bigmodel.cn
-GLM_API_KEY=
+# PostHog - FREE 1M events/month
+# Get at: https://app.posthog.com
+POSTHOG_API_KEY=
 
+# ─────────────────────────────────────────────────────────────────────────────
+# EMAIL (optional)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Resend - FREE 100 emails/day
+# Get at: https://resend.com
+RESEND_API_KEY=
+
+# ─────────────────────────────────────────────────────────────────────────────
 # SETTINGS
+# ─────────────────────────────────────────────────────────────────────────────
 MONTHLY_BUDGET=50
-ALERT_CHAT_ID=
-EOF
-    print_warning "Please edit .env with your API keys, then run this script again."
-    exit 0
-fi
+NODE_ENV=development
 
-# Check required keys
-MISSING_KEYS=0
-
-if [ -z "$ANTHROPIC_API_KEY" ]; then
-    print_error "ANTHROPIC_API_KEY is missing"
-    MISSING_KEYS=1
-fi
-
-if [ -z "$GEMINI_API_KEY" ]; then
-    print_warning "GEMINI_API_KEY is missing (needed for image generation)"
-fi
-
-if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
-    print_warning "TELEGRAM_BOT_TOKEN is missing (needed for alerts)"
-fi
-
-if [ $MISSING_KEYS -eq 1 ]; then
-    print_error "Please add the missing API keys to .env and run again."
-    exit 1
-fi
-
-print_success "Required environment variables present"
-echo ""
-
-# -----------------------------------------------------------------------------
-# Step 3: Install Dependencies
-# -----------------------------------------------------------------------------
-print_status "Installing dependencies..."
-
-# Create package.json if it doesn't exist
-if [ ! -f package.json ]; then
-    cat > package.json << 'EOF'
-{
-  "name": "app-factory-v4",
-  "version": "4.0.0",
-  "description": "Autonomous App Factory",
-  "scripts": {
-    "dashboard": "next dev -p 3000",
-    "build": "next build",
-    "n8n": "n8n start",
-    "health": "./scripts/health-check.sh",
-    "test": "vitest"
-  },
-  "dependencies": {
-    "next": "^14.0.0",
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
-    "@tanstack/react-query": "^5.0.0",
-    "recharts": "^2.10.0",
-    "lucide-react": "^0.300.0",
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^2.0.0",
-    "browser-use": "^0.1.0",
-    "capsolver-npm": "^1.0.0",
-    "@google/generative-ai": "^0.2.0"
-  },
-  "devDependencies": {
-    "typescript": "^5.0.0",
-    "tailwindcss": "^3.4.0",
-    "vitest": "^1.0.0"
-  }
-}
-EOF
-fi
-
-npm install
-print_success "Dependencies installed"
-echo ""
-
-# -----------------------------------------------------------------------------
-# Step 4: Set Up n8n (Workflow Automation)
-# -----------------------------------------------------------------------------
-print_status "Setting up n8n..."
-
-# Check if Docker is available (preferred for n8n)
-if command -v docker &> /dev/null; then
-    print_status "Docker found. Setting up n8n in Docker..."
-    
-    # Create n8n data directory
-    mkdir -p ~/.n8n
-    
-    # Check if n8n container exists
-    if docker ps -a | grep -q n8n; then
-        print_status "n8n container exists, starting..."
-        docker start n8n
-    else
-        print_status "Creating n8n container..."
-        docker run -d --name n8n \
-            -p 5678:5678 \
-            -v ~/.n8n:/home/node/.n8n \
-            -e GENERIC_TIMEZONE="America/New_York" \
-            -e TZ="America/New_York" \
-            n8nio/n8n
-    fi
-    
-    print_success "n8n running at http://localhost:5678"
+ENVEOF
+    print_warning "Created .env - Please add your API keys!"
 else
-    print_warning "Docker not found. Installing n8n via npm..."
-    npm install -g n8n
-    print_success "n8n installed. Start with: n8n start"
+    print_success ".env file exists"
 fi
 
-echo ""
-
-# -----------------------------------------------------------------------------
-# Step 5: Install Get-Shit-Done (GSD) Framework
-# -----------------------------------------------------------------------------
-print_status "Installing GSD framework..."
-
-npx get-shit-done-cc --claude --local
-print_success "GSD framework installed"
-echo ""
-
-# -----------------------------------------------------------------------------
-# Step 6: Validate API Keys
-# -----------------------------------------------------------------------------
-print_status "Validating API keys..."
-
-# Test Anthropic API
-print_status "Testing Anthropic API..."
-ANTHROPIC_TEST=$(curl -s -o /dev/null -w "%{http_code}" \
-    -X POST https://api.anthropic.com/v1/messages \
-    -H "Content-Type: application/json" \
-    -H "x-api-key: $ANTHROPIC_API_KEY" \
-    -H "anthropic-version: 2023-06-01" \
-    -d '{"model":"claude-3-haiku-20240307","max_tokens":10,"messages":[{"role":"user","content":"Hi"}]}' \
-    2>/dev/null || echo "000")
-
-if [ "$ANTHROPIC_TEST" = "200" ]; then
-    print_success "Anthropic API key valid"
-else
-    print_error "Anthropic API key invalid or error (HTTP $ANTHROPIC_TEST)"
-fi
-
-# Test Gemini API
-if [ -n "$GEMINI_API_KEY" ]; then
-    print_status "Testing Gemini API..."
-    GEMINI_TEST=$(curl -s -o /dev/null -w "%{http_code}" \
-        "https://generativelanguage.googleapis.com/v1/models?key=$GEMINI_API_KEY" \
-        2>/dev/null || echo "000")
-    
-    if [ "$GEMINI_TEST" = "200" ]; then
-        print_success "Gemini API key valid"
-    else
-        print_warning "Gemini API key may be invalid (HTTP $GEMINI_TEST)"
-    fi
-fi
-
-# Test Telegram Bot
-if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
-    print_status "Testing Telegram Bot..."
-    TELEGRAM_TEST=$(curl -s -o /dev/null -w "%{http_code}" \
-        "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getMe" \
-        2>/dev/null || echo "000")
-    
-    if [ "$TELEGRAM_TEST" = "200" ]; then
-        print_success "Telegram Bot token valid"
-        
-        # Send test message if chat ID is set
-        if [ -n "$ALERT_CHAT_ID" ]; then
-            curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-                -d "chat_id=$ALERT_CHAT_ID" \
-                -d "text=🏭 App Factory v4.0 is set up and ready!" \
-                > /dev/null 2>&1
-            print_success "Test message sent to Telegram"
-        fi
-    else
-        print_warning "Telegram Bot token may be invalid (HTTP $TELEGRAM_TEST)"
-    fi
-fi
-
-echo ""
-
-# -----------------------------------------------------------------------------
-# Step 7: Create Directory Structure
-# -----------------------------------------------------------------------------
-print_status "Creating directory structure..."
-
-mkdir -p .gsd
-mkdir -p .planning
-mkdir -p agents
-mkdir -p skills/browser-automation
-mkdir -p skills/content-generation
-mkdir -p skills/ui-generation
-mkdir -p skills/analytics
-mkdir -p workflows/n8n-templates
-mkdir -p dashboard/components
-mkdir -p dashboard/api
-mkdir -p templates/app-templates
-mkdir -p templates/landing-pages
-mkdir -p config
-mkdir -p docs
-mkdir -p scripts
+# Create data directories
+mkdir -p data/n8n
 mkdir -p data/logs
 mkdir -p data/backups
 
-print_success "Directory structure created"
+# =============================================================================
+# STEP 5: N8N CONFIGURATION
+# =============================================================================
+print_header "STEP 5: Configuring n8n Workflows"
+
+# Create n8n ecosystem config for PM2
+cat > ecosystem.config.js << 'PMEOF'
+module.exports = {
+  apps: [
+    {
+      name: 'n8n',
+      script: 'n8n',
+      args: 'start',
+      env: {
+        N8N_PORT: 5678,
+        N8N_PROTOCOL: 'http',
+        N8N_HOST: 'localhost',
+        GENERIC_TIMEZONE: 'America/New_York',
+        N8N_USER_FOLDER: './data/n8n',
+        N8N_TEMPLATES_ENABLED: 'true',
+        N8N_DIAGNOSTICS_ENABLED: 'false',
+        N8N_PERSONALIZATION_ENABLED: 'false',
+      },
+    },
+    {
+      name: 'dashboard',
+      cwd: './dashboard',
+      script: 'npm',
+      args: 'run dev',
+      env: {
+        PORT: 3000,
+      },
+    },
+  ],
+};
+PMEOF
+print_success "PM2 ecosystem config created"
+
+# Create n8n startup script that imports workflows
+cat > scripts/start-n8n.sh << 'N8NEOF'
+#!/bin/bash
+# Start n8n and auto-import workflows
+
+cd "$(dirname "$0")/.."
+
+# Start n8n in background
+n8n start &
+N8N_PID=$!
+
+# Wait for n8n to be ready
+echo "Waiting for n8n to start..."
+for i in {1..30}; do
+    if curl -s http://localhost:5678/healthz > /dev/null 2>&1; then
+        echo "n8n is ready!"
+        break
+    fi
+    sleep 1
+done
+
+# Import workflows if n8n is running
+if curl -s http://localhost:5678/healthz > /dev/null 2>&1; then
+    echo "Importing workflows..."
+
+    # Import each workflow
+    for workflow in workflows/n8n-templates/*.json; do
+        if [ -f "$workflow" ]; then
+            echo "Importing: $workflow"
+            curl -s -X POST "http://localhost:5678/api/v1/workflows" \
+                -H "Content-Type: application/json" \
+                -d @"$workflow" > /dev/null 2>&1 || true
+        fi
+    done
+
+    echo "Workflows imported!"
+fi
+
+# Keep n8n running
+wait $N8N_PID
+N8NEOF
+chmod +x scripts/start-n8n.sh
+print_success "n8n startup script created"
+
+# =============================================================================
+# STEP 6: CREATE CONVENIENCE SCRIPTS
+# =============================================================================
+print_header "STEP 6: Creating Convenience Scripts"
+
+# Start everything script
+cat > start.sh << 'STARTEOF'
+#!/bin/bash
+# Start the entire App Factory system
+
+cd "$(dirname "$0")"
+
+echo "🏭 Starting App Factory v4.0..."
 echo ""
 
-# -----------------------------------------------------------------------------
-# Step 8: Initialize State Files
-# -----------------------------------------------------------------------------
-print_status "Initializing state files..."
+# Load environment
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+fi
 
-# Create STATE.md
-cat > .gsd/STATE.md << 'EOF'
-# Factory State
+# Start with PM2
+pm2 start ecosystem.config.js
 
-## Current Project
-name: none
-status: idle
-phase: 0
-started: null
-
-## Active Tasks
-| ID | Agent | Task | Status | Progress |
-|----|-------|------|--------|----------|
-| - | - | - | - | - |
-
-## Completed Today
-- System initialized
-
-## Cost Today
-- Total: $0.00
-
-## Errors (Last 24h)
-- None
-EOF
-
-# Create config file
-cat > config/settings.json << 'EOF'
-{
-  "budget": {
-    "monthly": 50,
-    "alerts": {
-      "warning": 75,
-      "critical": 90
-    }
-  },
-  "agents": {
-    "orchestrator": { "model": "claude-3-5-sonnet", "enabled": true },
-    "researcher": { "model": "claude-3-5-haiku", "enabled": true },
-    "builder": { "model": "claude-3-5-sonnet", "enabled": true },
-    "marketer": { "model": "claude-3-5-haiku", "enabled": true },
-    "operator": { "model": "claude-3-5-haiku", "enabled": true }
-  },
-  "automation": {
-    "contentGeneration": true,
-    "socialPosting": false,
-    "marketResearch": true
-  }
-}
-EOF
-
-print_success "State files initialized"
 echo ""
+echo "═══════════════════════════════════════════════════════════"
+echo "  🚀 App Factory is running!"
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+echo "  Dashboard:  http://localhost:3000"
+echo "  n8n:        http://localhost:5678"
+echo ""
+echo "  Commands:"
+echo "    pm2 logs          - View all logs"
+echo "    pm2 logs dashboard - View dashboard logs"
+echo "    pm2 logs n8n      - View n8n logs"
+echo "    pm2 stop all      - Stop everything"
+echo "    pm2 restart all   - Restart everything"
+echo ""
+STARTEOF
+chmod +x start.sh
 
-# -----------------------------------------------------------------------------
-# Step 9: Create Health Check Script
-# -----------------------------------------------------------------------------
-print_status "Creating health check script..."
+# Stop script
+cat > stop.sh << 'STOPEOF'
+#!/bin/bash
+pm2 stop all
+echo "🏭 App Factory stopped"
+STOPEOF
+chmod +x stop.sh
 
+# Status script
+cat > status.sh << 'STATUSEOF'
+#!/bin/bash
+echo "🏭 App Factory Status"
+echo "═══════════════════════════════════════════════════════════"
+pm2 status
+echo ""
+echo "Services:"
+curl -s http://localhost:3000 > /dev/null 2>&1 && echo "  ✓ Dashboard: http://localhost:3000" || echo "  ✗ Dashboard: Not running"
+curl -s http://localhost:5678/healthz > /dev/null 2>&1 && echo "  ✓ n8n: http://localhost:5678" || echo "  ✗ n8n: Not running"
+STATUSEOF
+chmod +x status.sh
+
+print_success "Convenience scripts created: start.sh, stop.sh, status.sh"
+
+# =============================================================================
+# STEP 7: HEALTH CHECK
+# =============================================================================
+print_header "STEP 7: Running Health Check"
+
+# Update health check script
 cat > scripts/health-check.sh << 'HEALTHEOF'
 #!/bin/bash
+# App Factory v4.0 - System Health Check
+
+cd "$(dirname "$0")/.."
+
+echo ""
 echo "🏭 App Factory Health Check"
-echo "=========================="
+echo "═══════════════════════════════════════════════════════════"
 echo ""
 
-# Check API connectivity
-echo "API Status:"
-echo "-----------"
+# Load environment
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+fi
 
-# Anthropic
+echo "Services:"
+echo "─────────"
+
+# Check Dashboard
+if curl -s http://localhost:3000 > /dev/null 2>&1; then
+    echo "  ✓ Dashboard: Running (http://localhost:3000)"
+else
+    echo "  ✗ Dashboard: Not running"
+fi
+
+# Check n8n
+if curl -s http://localhost:5678/healthz > /dev/null 2>&1; then
+    echo "  ✓ n8n: Running (http://localhost:5678)"
+else
+    echo "  ✗ n8n: Not running"
+fi
+
+echo ""
+echo "API Keys:"
+echo "─────────"
+
+# Check Gemini (FREE)
+if [ -n "$GEMINI_API_KEY" ]; then
+    RESULT=$(curl -s -o /dev/null -w "%{http_code}" \
+        "https://generativelanguage.googleapis.com/v1/models?key=$GEMINI_API_KEY" 2>/dev/null)
+    [ "$RESULT" = "200" ] && echo "  ✓ Gemini: Valid (FREE)" || echo "  ✗ Gemini: Invalid"
+else
+    echo "  - Gemini: Not configured"
+fi
+
+# Check Anthropic
 if [ -n "$ANTHROPIC_API_KEY" ]; then
     RESULT=$(curl -s -o /dev/null -w "%{http_code}" -X POST https://api.anthropic.com/v1/messages \
         -H "x-api-key: $ANTHROPIC_API_KEY" -H "anthropic-version: 2023-06-01" \
         -H "Content-Type: application/json" \
         -d '{"model":"claude-3-haiku-20240307","max_tokens":10,"messages":[{"role":"user","content":"Hi"}]}' 2>/dev/null)
-    [ "$RESULT" = "200" ] && echo "✓ Anthropic: OK" || echo "✗ Anthropic: ERROR ($RESULT)"
+    [ "$RESULT" = "200" ] && echo "  ✓ Anthropic: Valid" || echo "  ✗ Anthropic: Invalid"
 else
-    echo "✗ Anthropic: NOT CONFIGURED"
+    echo "  - Anthropic: Not configured"
 fi
 
-# Check n8n
-if curl -s http://localhost:5678/healthz > /dev/null 2>&1; then
-    echo "✓ n8n: Running"
+# Check Vercel
+if [ -n "$VERCEL_TOKEN" ]; then
+    RESULT=$(curl -s -o /dev/null -w "%{http_code}" \
+        -H "Authorization: Bearer $VERCEL_TOKEN" \
+        "https://api.vercel.com/v2/user" 2>/dev/null)
+    [ "$RESULT" = "200" ] && echo "  ✓ Vercel: Valid" || echo "  ✗ Vercel: Invalid"
 else
-    echo "✗ n8n: Not running"
+    echo "  - Vercel: Not configured"
 fi
 
-# Check disk space
+# Check Telegram
+if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
+    RESULT=$(curl -s -o /dev/null -w "%{http_code}" \
+        "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getMe" 2>/dev/null)
+    [ "$RESULT" = "200" ] && echo "  ✓ Telegram: Valid" || echo "  ✗ Telegram: Invalid"
+else
+    echo "  - Telegram: Not configured"
+fi
+
+echo ""
+echo "System:"
+echo "─────────"
+
+# Disk space
 DISK_USAGE=$(df -h . | awk 'NR==2 {print $5}' | tr -d '%')
-if [ "$DISK_USAGE" -lt 80 ]; then
-    echo "✓ Disk Space: OK (${DISK_USAGE}% used)"
-else
-    echo "! Disk Space: LOW (${DISK_USAGE}% used)"
+[ "$DISK_USAGE" -lt 80 ] && echo "  ✓ Disk: ${DISK_USAGE}% used" || echo "  ! Disk: ${DISK_USAGE}% used (LOW)"
+
+# Memory
+if command -v free &> /dev/null; then
+    MEM=$(free -m | awk 'NR==2{printf "%.0f", $3*100/$2}')
+    echo "  ✓ Memory: ${MEM}% used"
 fi
 
 echo ""
-echo "System Status: Ready"
+echo "═══════════════════════════════════════════════════════════"
 HEALTHEOF
-
 chmod +x scripts/health-check.sh
-print_success "Health check script created"
-echo ""
 
-# -----------------------------------------------------------------------------
-# Complete!
-# -----------------------------------------------------------------------------
-echo ""
-echo "=========================================="
-echo "    🎉 Setup Complete!"
-echo "=========================================="
-echo ""
-echo "Next steps:"
-echo "  1. Review your .env file and add any missing keys"
-echo "  2. Start Claude Code: claude"
-echo "  3. Tell Claude: 'I want to build an app. Help me get started.'"
-echo ""
-echo "Useful commands:"
-echo "  claude                    - Start Claude Code"
-echo "  ./scripts/health-check.sh - Check system status"
-echo "  npm run dashboard         - Start the dashboard"
-echo ""
-echo "Documentation: docs/SETUP-GUIDE.md"
-echo "Main guide: CLAUDE.md"
-echo ""
+./scripts/health-check.sh
+
+# =============================================================================
+# COMPLETE
+# =============================================================================
+print_header "SETUP COMPLETE!"
+
+echo "
+  ┌─────────────────────────────────────────────────────────────┐
+  │                                                             │
+  │   🎉 App Factory v4.0 is ready!                             │
+  │                                                             │
+  │   NEXT STEPS:                                               │
+  │                                                             │
+  │   1. Add your API keys to .env                              │
+  │      (Gemini is FREE - highly recommended!)                 │
+  │                                                             │
+  │   2. Start the factory:                                     │
+  │      ./start.sh                                             │
+  │                                                             │
+  │   3. Open the dashboard:                                    │
+  │      http://localhost:3000                                  │
+  │                                                             │
+  │   4. Type your app idea and watch it build!                 │
+  │                                                             │
+  └─────────────────────────────────────────────────────────────┘
+
+  Quick Commands:
+  ─────────────────────────────────────────────────────────────
+  ./start.sh              Start everything
+  ./stop.sh               Stop everything
+  ./status.sh             Check status
+  ./scripts/health-check.sh  Full health check
+  claude                  Open Claude Code
+
+  Documentation:
+  ─────────────────────────────────────────────────────────────
+  CLAUDE.md               Main blueprint (read this!)
+  docs/SETUP-GUIDE.md     Detailed setup guide
+  docs/TROUBLESHOOTING.md Common issues
+"
+
 print_success "Happy building! 🚀"

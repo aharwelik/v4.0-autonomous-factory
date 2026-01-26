@@ -9,6 +9,131 @@
 
 ---
 
+## 🏗️ SYSTEM ARCHITECTURE (For Reverse Engineering)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         APP FACTORY v4.0 ARCHITECTURE                           │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  ┌─────────────┐     ┌─────────────────────────────────────────────────────┐   │
+│  │   YOU       │────▶│              DASHBOARD (localhost:3000)             │   │
+│  │ Type Idea   │     │  Next.js 14 + SQLite + Tailwind + shadcn/ui        │   │
+│  └─────────────┘     │                                                     │   │
+│                      │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌──────────┐  │   │
+│                      │  │ Idea    │ │ Setup   │ │Telegram │ │ Workflow │  │   │
+│                      │  │Discovery│ │ Guide   │ │ Alerts  │ │ Manager  │  │   │
+│                      │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬─────┘  │   │
+│                      └───────┼──────────┼──────────┼──────────┼──────────┘   │
+│                              │          │          │          │              │
+│  ┌───────────────────────────┴──────────┴──────────┴──────────┴────────────┐ │
+│  │                        API LAYER (Next.js Routes)                        │ │
+│  │  /api/dashboard  /api/discover  /api/ideas  /api/telegram  /api/settings │ │
+│  └───────────────────────────┬──────────────────────────────────────────────┘ │
+│                              │                                                │
+│  ┌───────────────────────────┴──────────────────────────────────────────────┐ │
+│  │                      DATA LAYER (SQLite + Cache)                         │ │
+│  │  /data/factory.db - ideas, apps, costs, settings, cache, background_jobs │ │
+│  └───────────────────────────┬──────────────────────────────────────────────┘ │
+│                              │                                                │
+│  ┌───────────────────────────┴──────────────────────────────────────────────┐ │
+│  │                    AI PROVIDER ABSTRACTION                               │ │
+│  │  Gemini (FREE!) ─┬─▶ callAI() ─▶ Unified Response                       │ │
+│  │  Claude         ─┤                                                       │ │
+│  │  OpenAI         ─┤   /dashboard/src/lib/ai-provider.ts                  │ │
+│  │  Grok           ─┘                                                       │ │
+│  └──────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                     n8n WORKFLOWS (localhost:5678)                       │   │
+│  │                                                                          │   │
+│  │  ┌────────────────────┐    ┌────────────────────────┐                   │   │
+│  │  │ content-generation │    │ opportunity-discovery  │                   │   │
+│  │  │  • Daily 8 AM      │    │  • Every 4 hours       │                   │   │
+│  │  │  • AI content      │    │  • Reddit scraping     │                   │   │
+│  │  │  • Auto-post       │    │  • Score & save        │                   │   │
+│  │  └────────────────────┘    └────────────────────────┘                   │   │
+│  │                                                                          │   │
+│  │  /workflows/n8n-templates/*.json                                        │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                         AGENT SYSTEM                                     │   │
+│  │                                                                          │   │
+│  │  orchestrator.md ─┬─▶ researcher.md  (find opportunities)               │   │
+│  │     (boss)        ├─▶ builder.md     (write code)                       │   │
+│  │                   ├─▶ marketer.md    (create content)                   │   │
+│  │                   └─▶ operator.md    (monitor & maintain)               │   │
+│  │                                                                          │   │
+│  │  /agents/*.md                                                           │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### ONE-COMMAND SETUP
+
+```bash
+# Clone and run setup - everything auto-installs
+git clone https://github.com/aharwelik/v4.0-autonomous-factory.git
+cd v4.0-autonomous-factory
+chmod +x scripts/setup.sh && ./scripts/setup.sh
+
+# After setup, start everything:
+./start.sh
+
+# Dashboard: http://localhost:3000
+# n8n:       http://localhost:5678
+```
+
+### WHAT GETS AUTO-INSTALLED
+
+| Component | What | Where |
+|-----------|------|-------|
+| **Node.js** | Runtime | Global |
+| **Claude Code** | AI coding assistant | Global (`npm install -g`) |
+| **n8n** | Workflow automation | Global (`npm install -g`) |
+| **PM2** | Process manager | Global (`npm install -g`) |
+| **Dashboard** | Next.js app | `./dashboard/` |
+| **SQLite DB** | Local database | `./data/factory.db` |
+| **Workflows** | n8n JSON templates | `./workflows/n8n-templates/` |
+
+### KEY FILES TO UNDERSTAND
+
+| File | Purpose | Read First? |
+|------|---------|-------------|
+| `CLAUDE.md` | This file - system blueprint | ✅ Yes |
+| `scripts/setup.sh` | Auto-installs everything | ✅ Yes |
+| `ecosystem.config.js` | PM2 config (starts services) | Optional |
+| `dashboard/src/lib/db.ts` | SQLite schema & operations | If modifying DB |
+| `dashboard/src/lib/ai-provider.ts` | AI API abstraction | If adding AI providers |
+| `dashboard/src/app/page.tsx` | Main dashboard UI | If modifying UI |
+| `agents/*.md` | Agent behavior definitions | If modifying agents |
+
+### DATA FLOW
+
+```
+1. USER INPUT
+   └─▶ Dashboard textarea "Build an app that..."
+
+2. IDEA PROCESSING
+   └─▶ /api/ideas (POST) ─▶ SQLite ─▶ ideas table
+
+3. VALIDATION (background)
+   └─▶ AI Provider ─▶ Score idea ─▶ Update status
+
+4. BUILD (when ready)
+   └─▶ Claude Code ─▶ Generate app ─▶ /templates/
+
+5. DEPLOY
+   └─▶ Vercel API ─▶ Production URL
+
+6. MONITOR
+   └─▶ n8n workflows ─▶ Telegram alerts
+```
+
+---
+
 ## 🎯 WHAT THIS SYSTEM DOES
 
 ```
@@ -58,45 +183,40 @@
 
 ---
 
-## 🚀 QUICK START (For a 15-year-old)
+## 🚀 QUICK START
 
-### Step 1: Get Your API Keys (30 minutes)
-
-You need accounts on these websites. Ask a parent if needed:
-
-1. **Anthropic** (Claude): https://console.anthropic.com
-   - Sign up with email
-   - Create API key → copy it somewhere safe
-   
-2. **Vercel**: https://vercel.com
-   - Sign up with GitHub (create GitHub first if needed)
-   - Get API key from Settings → Tokens
-   
-3. **Gemini**: https://ai.google.dev
-   - Sign up with Google account
-   - Create API key (it's free!)
-   
-4. **Telegram Bot**: https://t.me/BotFather
-   - Message BotFather
-   - Type /newbot
-   - Copy the token
-
-### Step 2: Install Claude Code (10 minutes)
-
-Open your computer's Terminal (Mac) or Command Prompt (Windows) and type:
+### Step 1: One-Command Setup
 
 ```bash
-# Install Node.js first if you don't have it
-# Go to nodejs.org and download it
+# Clone the repo
+git clone https://github.com/aharwelik/v4.0-autonomous-factory.git
+cd v4.0-autonomous-factory
 
-# Then install Claude Code
-npm install -g @anthropic-ai/claude-code
-
-# Verify it works
-claude --version
+# Run setup (installs EVERYTHING automatically)
+chmod +x scripts/setup.sh && ./scripts/setup.sh
 ```
 
-### Step 3: Set Up the Factory (5 minutes)
+This auto-installs:
+- Node.js (if missing)
+- Claude Code
+- n8n (workflow automation)
+- PM2 (process manager)
+- All project dependencies
+
+### Step 2: Add API Keys (5 minutes)
+
+Edit `.env` and add your keys. **Most are FREE!**
+
+| Service | Free Tier | Get Key At |
+|---------|-----------|------------|
+| **Gemini** | 1M tokens/day FREE | https://aistudio.google.com/app/apikey |
+| **Vercel** | Unlimited deploys | https://vercel.com/account/tokens |
+| **Clerk** | 10,000 users | https://dashboard.clerk.com |
+| **Neon** | 512MB PostgreSQL | https://console.neon.tech |
+| **Telegram** | Unlimited | https://t.me/BotFather |
+| **PostHog** | 1M events/month | https://app.posthog.com |
+
+### Step 3: Start the Factory
 
 ```bash
 # Create a folder for your apps
