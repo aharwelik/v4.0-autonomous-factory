@@ -13,6 +13,7 @@ import { CostCenter } from "@/components/CostCenter";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { SetupGuide } from "@/components/SetupGuide";
 import { IdeaDiscovery } from "@/components/IdeaDiscovery";
+import { IdeasManager } from "@/components/IdeasManager";
 import { TelegramNotifications } from "@/components/TelegramNotifications";
 import { WorkflowManager } from "@/components/WorkflowManager";
 import BuildAppVisual from "@/components/BuildAppVisual";
@@ -697,11 +698,21 @@ Then come back here and describe your app idea.`
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      {/* LIVE DISCOVERY + SETUP - REAL FUNCTIONALITY                             */}
+      {/* IDEAS MANAGER + SETUP - REAL FUNCTIONALITY                              */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       <div className="max-w-6xl mx-auto px-6 py-6 grid md:grid-cols-2 gap-6">
-        {/* Left: Idea Discovery (works without APIs!) */}
-        <IdeaDiscovery onIdeaAdded={fetchData} />
+        {/* Left: Ideas Manager with history dropdown */}
+        <div className="space-y-6">
+          <IdeasManager
+            onSelectIdea={(ideaText) => {
+              setIdea(ideaText);
+              // Scroll to top where the input is
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            onRefresh={fetchData}
+          />
+          <IdeaDiscovery onIdeaAdded={fetchData} />
+        </div>
 
         {/* Right: Setup Guide with signup links */}
         <div className="space-y-6">

@@ -173,7 +173,12 @@ export interface Idea {
   description?: string;
   source?: string;
   score: number;
-  status: 'new' | 'validating' | 'validated' | 'building' | 'rejected';
+  status: 'new' | 'validating' | 'validated' | 'queued' | 'building' | 'built' | 'deploying' | 'deployed' | 'rejected' | 'failed';
+  validation_result?: string;  // JSON of AI validation
+  build_job_id?: string;       // Link to background job
+  app_id?: string;             // Link to generated app
+  deploy_url?: string;         // Live URL if deployed
+  error?: string;              // Error message if failed
   created_at: string;
   updated_at: string;
 }
@@ -225,8 +230,14 @@ export const ideas = {
         SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new,
         SUM(CASE WHEN status = 'validating' THEN 1 ELSE 0 END) as validating,
         SUM(CASE WHEN status = 'validated' THEN 1 ELSE 0 END) as validated,
+        SUM(CASE WHEN status = 'queued' THEN 1 ELSE 0 END) as queued,
         SUM(CASE WHEN status = 'building' THEN 1 ELSE 0 END) as building,
+        SUM(CASE WHEN status = 'built' THEN 1 ELSE 0 END) as built,
+        SUM(CASE WHEN status = 'deploying' THEN 1 ELSE 0 END) as deploying,
+        SUM(CASE WHEN status = 'deployed' THEN 1 ELSE 0 END) as deployed,
         SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected,
+        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+        SUM(CASE WHEN status IN ('validating', 'queued', 'building', 'deploying') THEN 1 ELSE 0 END) as active,
         AVG(score) as avg_score
       FROM ideas
     `).get();

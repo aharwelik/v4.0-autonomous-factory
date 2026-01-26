@@ -49,13 +49,23 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Parse job data
+    // Parse job data - check both data and payload columns (migration support)
     let jobData: BuildJobData;
     try {
-      jobData = JSON.parse(buildJob.data || "{}");
-    } catch {
-      backgroundJobs.update(buildJob.id, { status: "failed", error: "Invalid job data" });
-      return NextResponse.json({ success: false, error: "Invalid job data" }, { status: 400 });
+      const rawData = buildJob.data || buildJob.payload || "{}";
+      jobData = JSON.parse(rawData);
+
+      // Validate required fields
+      if (!jobData.idea) {
+        throw new Error("Missing idea in job data");
+      }
+      if (!jobData.validation) {
+        jobData.validation = {}; // Use empty validation if missing
+      }
+    } catch (parseError) {
+      const errorMsg = parseError instanceof Error ? parseError.message : "Invalid job data";
+      backgroundJobs.update(buildJob.id, { status: "failed", error: errorMsg });
+      return NextResponse.json({ success: false, error: errorMsg }, { status: 400 });
     }
 
     // Mark as running

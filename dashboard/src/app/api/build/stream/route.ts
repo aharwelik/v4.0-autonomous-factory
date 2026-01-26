@@ -242,6 +242,7 @@ Respond in JSON format ONLY (no markdown):
         ideas.update(ideaId, {
           score: validation.score,
           status: validation.isViable ? "validated" : "rejected",
+          validation_result: JSON.stringify(validation),
         });
 
         send("step", {
@@ -322,6 +323,12 @@ Respond in JSON format ONLY (no markdown):
             provider: provider.provider,
           }),
           createdAt: new Date().toISOString(),
+        });
+
+        // Update idea to link to job and set status to queued
+        ideas.update(ideaId, {
+          status: "queued",
+          build_job_id: jobId,
         });
 
         cache.delete("dashboard_data");

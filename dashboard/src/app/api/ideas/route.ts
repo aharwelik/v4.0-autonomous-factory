@@ -14,9 +14,12 @@ export async function GET(request: NextRequest) {
   const limit = parseInt(searchParams.get('limit') || '50');
 
   const ideaList = ideas.list(status, limit);
+  const stats = ideas.stats();
 
   return NextResponse.json({
+    success: true,
     ideas: ideaList,
+    stats,
     total: ideaList.length,
   });
 }
