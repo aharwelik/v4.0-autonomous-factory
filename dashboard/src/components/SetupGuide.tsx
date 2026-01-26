@@ -180,23 +180,33 @@ const services: Service[] = [
     id: "hostinger",
     name: "Hostinger",
     category: "hosting",
-    purpose: "Traditional web hosting (if you have Hostinger account)",
-    whyNeeded: "Alternative to Vercel. Use this if you already pay for Hostinger hosting.",
+    purpose: "Deploy to your Hostinger hosting account",
+    whyNeeded: "If you have Hostinger, use this! Your apps will deploy to your existing hosting. You only need to fill in ONE method below (Git OR FTP).",
     required: false,
     free: false,
-    freeDetails: "$3-12/month depending on plan",
+    freeDetails: "Use your existing Hostinger plan - no extra cost",
     envVars: [
-      { key: "HOSTINGER_GIT_URL", label: "Git Deploy URL", placeholder: "git@github.com:user/repo.git", secret: false },
-      { key: "HOSTINGER_FTP_HOST", label: "FTP Host (alternative)", placeholder: "ftp.yourdomain.com", secret: false },
+      { key: "HOSTINGER_GIT_URL", label: "Git Deploy URL (Option 1 - Recommended)", placeholder: "https://github.com/yourname/repo.git", secret: false },
+      { key: "HOSTINGER_FTP_HOST", label: "OR FTP Host (Option 2)", placeholder: "ftp.yourdomain.com", secret: false },
       { key: "HOSTINGER_FTP_USER", label: "FTP Username", placeholder: "your-ftp-user", secret: false },
       { key: "HOSTINGER_FTP_PASS", label: "FTP Password", placeholder: "your-ftp-password", secret: true },
     ],
     steps: [
-      "Log in to Hostinger hPanel",
-      "Click 'Websites' → Select your site",
-      "For Git Deploy: Click 'Git' → Copy the URL",
-      "For FTP: Click 'FTP Accounts' → Copy credentials",
-      "Enter the details below"
+      "Log in to Hostinger hPanel at hpanel.hostinger.com",
+      "Click 'Websites' in the menu",
+      "Select the website you want to deploy to",
+      "",
+      "OPTION 1 - Git Deploy (Recommended):",
+      "  → Click 'Git' in the left sidebar",
+      "  → Copy the repository URL",
+      "  → Paste it in 'Git Deploy URL' below",
+      "",
+      "OPTION 2 - FTP Deploy:",
+      "  → Click 'FTP Accounts' in left sidebar",
+      "  → Copy Host, Username, and create/copy Password",
+      "  → Fill in the FTP fields below",
+      "",
+      "You only need ONE method - Git OR FTP, not both!"
     ],
     signupUrl: "https://hpanel.hostinger.com",
   },
@@ -377,6 +387,13 @@ export function SetupGuide({ onKeySaved }: SetupGuideProps = {}) {
 
   // Check if a specific service is fully configured
   const isServiceConfigured = (service: Service) => {
+    // Special case: Hostinger needs EITHER Git OR FTP, not both
+    if (service.id === "hostinger") {
+      const hasGit = !!savedKeys["HOSTINGER_GIT_URL"];
+      const hasFtp = !!(savedKeys["HOSTINGER_FTP_HOST"] && savedKeys["HOSTINGER_FTP_USER"] && savedKeys["HOSTINGER_FTP_PASS"]);
+      return hasGit || hasFtp;
+    }
+    // Default: all envVars must be filled
     return service.envVars.every((env) => savedKeys[env.key]);
   };
 
@@ -531,8 +548,9 @@ export function SetupGuide({ onKeySaved }: SetupGuideProps = {}) {
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{service.name}</span>
                             {configured && <Badge className="bg-green-600 text-xs">✓ Configured</Badge>}
-                            {service.free && !configured && <Badge className="bg-blue-600 text-xs">FREE</Badge>}
-                            {grayedOut && <Badge variant="secondary" className="text-xs">Alternative</Badge>}
+                            {service.free && !configured && !grayedOut && <Badge className="bg-blue-600 text-xs">FREE</Badge>}
+                            {!configured && !grayedOut && <Badge variant="outline" className="text-xs">Click to set up →</Badge>}
+                            {grayedOut && <Badge variant="secondary" className="text-xs">Alternative (not needed)</Badge>}
                           </div>
                           <p className="text-sm text-muted-foreground">{service.purpose}</p>
                         </div>
