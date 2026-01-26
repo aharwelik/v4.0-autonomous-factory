@@ -103,6 +103,15 @@ export default function Dashboard() {
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [showBuildVisual, setShowBuildVisual] = useState(false);
 
+  // Preflight check state
+  const [preflightStatus, setPreflightStatus] = useState<{
+    canBuild: boolean;
+    canDeploy: boolean;
+    status: { emoji: string; message: string; level: string };
+    blockers: Array<{ name: string; key: string; howToGet: string; freeOption?: boolean }>;
+    recommendations: Array<{ priority: number; message: string; url: string }>;
+  } | null>(null);
+
   const addLog = (message: string) => {
     setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
   };
@@ -110,13 +119,33 @@ export default function Dashboard() {
   const handleSubmitIdea = async () => {
     if (!idea.trim()) return;
 
+    // First check if we can build
+    if (!preflightStatus?.canBuild) {
+      addLog("");
+      addLog("🔴 SETUP REQUIRED");
+      addLog("═══════════════════════════════════════════════════════");
+      addLog("You need to configure an AI API key before building.");
+      addLog("");
+      addLog("Missing:");
+      preflightStatus?.blockers.forEach(b => {
+        addLog(`   ❌ ${b.name}`);
+        addLog(`      Get it here: ${b.howToGet}`);
+      });
+      addLog("");
+      addLog("👇 Scroll down to 'Quick Setup' and add your API keys");
+      return;
+    }
+
     setIsProcessing(true);
     setLogs([]);
 
-    // Phase 1: Send to Build API
+    // Phase 1: Understanding
     setCurrentPhase("understanding");
-    addLog("🎯 Analyzing your idea...");
-    addLog(`Input: "${idea}"`);
+    addLog("🎯 STEP 1: Understanding Your Idea");
+    addLog("═══════════════════════════════════════════════════════");
+    addLog(`📝 Input: "${idea.slice(0, 100)}${idea.length > 100 ? "..." : ""}"`);
+    addLog("");
+    addLog("📤 Sending to AI for validation...");
 
     try {
       const response = await fetch("/api/build", {
@@ -131,16 +160,16 @@ export default function Dashboard() {
       const result = await response.json();
 
       if (!result.success) {
-        // Check if it needs setup
         if (result.needsSetup) {
           setCurrentPhase("ready");
           addLog("");
-          addLog("⚠️ API KEY REQUIRED");
+          addLog("🔴 API KEY REQUIRED");
           addLog("═══════════════════════════════════════════════════════");
           addLog(result.error);
           addLog("");
-          addLog("👉 Scroll down to 'Quick Setup' and add your Gemini API key (FREE!)");
+          addLog("👇 Scroll down to 'Quick Setup' and add your Gemini API key (FREE!)");
           setIsProcessing(false);
+          fetchPreflight(); // Refresh status
           return;
         }
         throw new Error(result.error || "Build failed");
@@ -148,67 +177,117 @@ export default function Dashboard() {
 
       // Phase 2: Show validation results
       setCurrentPhase("validation");
-      addLog(`💾 Saved idea: ${result.ideaId}`);
+      addLog("✅ AI Response Received!");
+      addLog("");
+      addLog("🔍 STEP 2: Validation Results");
+      addLog("═══════════════════════════════════════════════════════");
+      addLog(`💾 Idea ID: ${result.ideaId}`);
+      addLog("");
 
       if (result.validation) {
-        addLog(`📊 Validation Score: ${result.validation.score}/100`);
-        addLog(`🎯 Target Audience: ${result.validation.targetAudience}`);
-        addLog(`💰 Suggested Price: $${result.validation.targetPrice}/month`);
-        addLog(`⏱️ Build Complexity: ${result.validation.buildComplexity}`);
-        addLog(`📈 Recommendation: ${result.validation.recommendation}`);
+        // Score with visual bar
+        const score = result.validation.score || 0;
+        const scoreBar = "█".repeat(Math.floor(score / 10)) + "░".repeat(10 - Math.floor(score / 10));
+        addLog(`📊 Score: [${scoreBar}] ${score}/100`);
+        addLog("");
+
+        addLog("📋 Analysis Details:");
+        addLog(`   🎯 Target Audience: ${result.validation.targetAudience || "N/A"}`);
+        addLog(`   💰 Suggested Price: $${result.validation.targetPrice || 19}/month`);
+        addLog(`   🏗️ Complexity: ${result.validation.buildComplexity || "medium"}`);
+        addLog(`   📈 Recommendation: ${result.validation.recommendation || "CONSIDER"}`);
+
+        if (result.validation.competitors?.length > 0) {
+          addLog("");
+          addLog("🏢 Competitors Found:");
+          result.validation.competitors.forEach((c: string) => addLog(`   • ${c}`));
+        }
 
         if (result.validation.concerns?.length > 0) {
           addLog("");
-          addLog("⚠️ Concerns:");
+          addLog("⚠️ Concerns to Address:");
           result.validation.concerns.forEach((c: string) => addLog(`   • ${c}`));
+        }
+
+        if (result.validation.coreFeatures?.length > 0) {
+          addLog("");
+          addLog("✨ Core Features to Build:");
+          result.validation.coreFeatures.forEach((f: string) => addLog(`   • ${f}`));
         }
 
         if (result.validation.appName) {
           addLog("");
-          addLog(`📱 Suggested Name: ${result.validation.appName}`);
+          addLog(`📱 Suggested App Name: "${result.validation.appName}"`);
+          if (result.validation.tagline) {
+            addLog(`   "${result.validation.tagline}"`);
+          }
         }
       }
 
       // Phase 3: Show next steps based on result
-      setCurrentPhase("ready");
       addLog("");
-      addLog("═══════════════════════════════════════════════════════");
+      setCurrentPhase("ready");
 
       if (result.phase === "queued") {
-        addLog("🚀 BUILD QUEUED - Running in Background!");
+        addLog("🚀 STEP 3: Build Queued!");
         addLog("═══════════════════════════════════════════════════════");
         addLog("");
-        addLog(`Job ID: ${result.jobId}`);
-        addLog("The AI is now building your app...");
+        addLog(`🔧 Job ID: ${result.jobId}`);
+        addLog(`🤖 AI Provider: ${result.validation?.provider || "Gemini"}`);
         addLog("");
-        addLog("👉 Check the 'Build' tab below to see visual progress!");
-        if (result.nextSteps) {
-          result.nextSteps.forEach((step: string) => addLog(`✓ ${step}`));
+        addLog("📦 What's Happening Now:");
+        addLog("   1. AI is generating app specification...");
+        addLog("   2. Creating all code files...");
+        addLog("   3. Setting up project structure...");
+        addLog("   4. Saving to /generated-apps/");
+        addLog("");
+        addLog("👉 Click the 'Build' tab below to watch live progress!");
+        addLog("");
+
+        if (!preflightStatus?.canDeploy) {
+          addLog("💡 TIP: Add Vercel token in Setup for auto-deployment");
         }
+
         // Set job ID for visual tracking
         setActiveJobId(result.jobId);
         setShowBuildVisual(true);
+
       } else if (result.phase === "validation" && !result.validation?.isViable) {
         addLog("❌ IDEA DID NOT PASS VALIDATION");
         addLog("═══════════════════════════════════════════════════════");
         addLog("");
-        addLog("Consider revising your idea based on the concerns above.");
+        addLog("The AI thinks this idea may struggle to reach $10k MRR.");
+        addLog("");
+        addLog("💡 Suggestions:");
+        addLog("   • Make the target audience more specific");
+        addLog("   • Focus on a unique angle competitors miss");
+        addLog("   • Consider a higher price point for premium features");
+        addLog("");
+        addLog("Try refining your idea and submit again!");
+
       } else {
         addLog("✅ VALIDATION COMPLETE");
         addLog("═══════════════════════════════════════════════════════");
         addLog("");
+        addLog("Your idea passed validation!");
         if (result.buildCommand) {
+          addLog("");
           addLog("To build manually, run:");
-          addLog(result.buildCommand);
+          addLog(`   ${result.buildCommand}`);
         }
       }
 
     } catch (error) {
       setCurrentPhase("ready");
       addLog("");
-      addLog("❌ ERROR");
+      addLog("❌ ERROR OCCURRED");
       addLog("═══════════════════════════════════════════════════════");
       addLog(error instanceof Error ? error.message : "Unknown error");
+      addLog("");
+      addLog("💡 Troubleshooting:");
+      addLog("   • Check your API key is valid in Setup");
+      addLog("   • Try refreshing the page");
+      addLog("   • Check browser console for details");
     }
 
     setIsProcessing(false);
@@ -237,8 +316,22 @@ export default function Dashboard() {
     }
   };
 
+  // Fetch preflight status
+  const fetchPreflight = async () => {
+    try {
+      const res = await fetch("/api/preflight");
+      const data = await res.json();
+      if (data.success) {
+        setPreflightStatus(data);
+      }
+    } catch (error) {
+      console.error("Preflight check failed:", error);
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchPreflight();
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -276,7 +369,10 @@ export default function Dashboard() {
       <SettingsPanel
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
-        onSettingsChange={fetchData}
+        onSettingsChange={() => {
+          fetchData();
+          fetchPreflight();
+        }}
       />
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}
@@ -316,33 +412,115 @@ export default function Dashboard() {
             </p>
           </div>
 
+          {/* PREFLIGHT STATUS - SHOW WHAT'S NEEDED */}
+          {preflightStatus && !preflightStatus.canBuild && (
+            <Card className="bg-red-950/50 border-red-500/50 mb-4">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-bold text-red-300 mb-2">
+                      {preflightStatus.status.emoji} {preflightStatus.status.message}
+                    </h3>
+                    <div className="space-y-2">
+                      {preflightStatus.blockers.map((blocker) => (
+                        <div key={blocker.key} className="flex items-center justify-between bg-red-900/30 rounded-lg p-3">
+                          <div>
+                            <span className="text-white font-medium">{blocker.name}</span>
+                            {blocker.freeOption && (
+                              <Badge className="ml-2 bg-green-600">FREE</Badge>
+                            )}
+                          </div>
+                          <a
+                            href={blocker.howToGet}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded transition-colors"
+                          >
+                            Get Key →
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-red-300/80 text-sm mt-3">
+                      👇 Scroll down to "Quick Setup" to add your API keys
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* PREFLIGHT STATUS - PARTIAL (can build, can't deploy) */}
+          {preflightStatus && preflightStatus.canBuild && !preflightStatus.canDeploy && (
+            <Card className="bg-yellow-950/30 border-yellow-500/30 mb-4">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 text-yellow-300 text-sm">
+                  <span>{preflightStatus.status.emoji}</span>
+                  <span>{preflightStatus.status.message}</span>
+                  <span className="text-yellow-400/60 ml-2">
+                    (Add Vercel token below for auto-deploy)
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* PREFLIGHT STATUS - ALL GOOD */}
+          {preflightStatus && preflightStatus.canBuild && preflightStatus.canDeploy && (
+            <Card className="bg-green-950/30 border-green-500/30 mb-4">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 text-green-300 text-sm">
+                  <span>{preflightStatus.status.emoji}</span>
+                  <span>{preflightStatus.status.message}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* THE MAIN INPUT - THIS IS THE #1 FEATURE */}
-          <Card className="bg-card/50 backdrop-blur border-2 border-primary/20">
+          <Card className={`bg-card/50 backdrop-blur border-2 ${
+            preflightStatus?.canBuild ? "border-primary/20" : "border-red-500/30"
+          }`}>
             <CardContent className="p-6">
               <textarea
                 value={idea}
                 onChange={(e) => setIdea(e.target.value)}
-                placeholder={`Describe your app idea in detail...
+                placeholder={preflightStatus?.canBuild
+                  ? `Describe your app idea in detail...
 
 Example: "A tool that helps freelancers track time and invoice clients.
 Should have a timer, project management, and Stripe integration for payments.
-Target: Freelance designers making $50k-100k/year. Price: $19/month."`}
+Target: Freelance designers making $50k-100k/year. Price: $19/month."`
+                  : `⚠️ Setup required before you can build apps.
+
+Add your Gemini API key (FREE!) in the Quick Setup section below.
+Then come back here and describe your app idea.`
+                }
                 className="w-full h-36 bg-background border border-input rounded-lg p-4 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none font-mono text-sm"
-                disabled={isProcessing}
+                disabled={isProcessing || !preflightStatus?.canBuild}
               />
 
               <div className="flex justify-between items-center mt-4">
                 <div className="text-sm text-muted-foreground">
-                  Include: problem, target user, price point, key features
+                  {preflightStatus?.canBuild
+                    ? "Include: problem, target user, price point, key features"
+                    : "👇 Complete setup below first"
+                  }
                 </div>
                 <Button
                   onClick={handleSubmitIdea}
-                  disabled={isProcessing || !idea.trim()}
+                  disabled={isProcessing || !idea.trim() || !preflightStatus?.canBuild}
                   size="lg"
                   className="gap-2"
                 >
                   <Rocket className="w-5 h-5" />
-                  {isProcessing ? "Processing..." : "Build This App →"}
+                  {!preflightStatus?.canBuild
+                    ? "Setup Required"
+                    : isProcessing
+                    ? "Processing..."
+                    : "Build This App →"
+                  }
                 </Button>
               </div>
             </CardContent>
@@ -434,7 +612,7 @@ Target: Freelance designers making $50k-100k/year. Price: $19/month."`}
 
         {/* Right: Setup Guide with signup links */}
         <div className="space-y-6">
-          <SetupGuide />
+          <SetupGuide onKeySaved={fetchPreflight} />
           <TelegramNotifications />
         </div>
       </div>

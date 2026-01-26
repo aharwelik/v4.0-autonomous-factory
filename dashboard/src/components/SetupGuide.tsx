@@ -180,9 +180,30 @@ const services: Service[] = [
       "Paste below and click Save",
     ],
   },
+  {
+    name: "Hostinger",
+    description: "Deploy to your Hostinger hosting",
+    signupUrl: "https://www.hostinger.com",
+    docsUrl: "https://support.hostinger.com",
+    envVar: "HOSTINGER_GIT_URL",
+    free: false,
+    freeDetails: "$3-12/month hosting",
+    required: false,
+    placeholder: "git@github.com:user/repo.git or FTP host",
+    instructions: [
+      "Log in to Hostinger hPanel",
+      "Go to Websites → Your Site → Git",
+      "Copy the Git URL (or FTP details)",
+      "Paste below and click Save",
+    ],
+  },
 ];
 
-export function SetupGuide() {
+interface SetupGuideProps {
+  onKeySaved?: () => void;
+}
+
+export function SetupGuide({ onKeySaved }: SetupGuideProps = {}) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [savedKeys, setSavedKeys] = useState<Record<string, boolean>>({});
@@ -245,6 +266,8 @@ export function SetupGuide() {
 
       if (response.ok) {
         setSavedKeys((prev) => ({ ...prev, [service.envVar]: true }));
+        // Notify parent to refresh preflight status
+        onKeySaved?.();
       }
     } catch {
       setValidated((prev) => ({ ...prev, [service.envVar]: false }));
