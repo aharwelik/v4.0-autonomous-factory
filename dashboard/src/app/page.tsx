@@ -14,6 +14,7 @@ import { SettingsPanel } from "@/components/SettingsPanel";
 import { SetupGuide } from "@/components/SetupGuide";
 import { IdeaDiscovery } from "@/components/IdeaDiscovery";
 import { TelegramNotifications } from "@/components/TelegramNotifications";
+import { WorkflowManager } from "@/components/WorkflowManager";
 import {
   Settings,
   RefreshCw,
@@ -28,6 +29,7 @@ import {
   Factory,
   Rocket,
   AlertTriangle,
+  Workflow,
 } from "lucide-react";
 
 interface DashboardData {
@@ -436,6 +438,10 @@ Target: Freelance designers making $50k-100k/year. Price: $19/month."`}
               <Wallet className="w-4 h-4" />
               Costs
             </TabsTrigger>
+            <TabsTrigger value="workflows" className="gap-2">
+              <Workflow className="w-4 h-4" />
+              Workflows
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pipeline">
@@ -452,6 +458,9 @@ Target: Freelance designers making $50k-100k/year. Price: $19/month."`}
           </TabsContent>
           <TabsContent value="costs">
             <CostCenter costs={data.costs} budget={data.budget} />
+          </TabsContent>
+          <TabsContent value="workflows">
+            <WorkflowManager />
           </TabsContent>
         </Tabs>
 
