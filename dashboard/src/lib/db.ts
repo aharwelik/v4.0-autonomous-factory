@@ -444,15 +444,16 @@ export interface BackgroundJob {
 }
 
 export const backgroundJobs = {
-  create: (job: { id: string; type: string; payload?: unknown; priority?: number; runInBackground?: boolean }): BackgroundJob => {
+  create: (job: { id: string; type: string; data?: string; status?: string; payload?: unknown; priority?: number; runInBackground?: boolean; createdAt?: string }): BackgroundJob => {
     const stmt = db.prepare(`
-      INSERT INTO background_jobs (id, type, payload, priority, run_in_background)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO background_jobs (id, type, payload, status, priority, run_in_background)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       job.id,
       job.type,
-      job.payload ? JSON.stringify(job.payload) : null,
+      job.data || (job.payload ? JSON.stringify(job.payload) : null),
+      job.status || 'pending',
       job.priority ?? 0,
       job.runInBackground !== false ? 1 : 0
     );
@@ -467,6 +468,14 @@ export const backgroundJobs = {
     return db.prepare(`
       SELECT * FROM background_jobs
       WHERE status = 'pending'
+      ORDER BY priority DESC, created_at ASC
+    `).all() as BackgroundJob[];
+  },
+
+  getPending: (): BackgroundJob[] => {
+    return db.prepare(`
+      SELECT * FROM background_jobs
+      WHERE status IN ('pending', 'queued', 'running')
       ORDER BY priority DESC, created_at ASC
     `).all() as BackgroundJob[];
   },

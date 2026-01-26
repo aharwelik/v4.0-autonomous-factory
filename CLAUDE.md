@@ -116,21 +116,59 @@ chmod +x scripts/setup.sh && ./scripts/setup.sh
 1. USER INPUT
    └─▶ Dashboard textarea "Build an app that..."
 
-2. IDEA PROCESSING
-   └─▶ /api/ideas (POST) ─▶ SQLite ─▶ ideas table
+2. BUILD API (/api/build)
+   └─▶ Validates idea with AI (Gemini FREE or configured provider)
+   └─▶ Scores for $10k MRR potential
+   └─▶ Queues background build job
 
-3. VALIDATION (background)
-   └─▶ AI Provider ─▶ Score idea ─▶ Update status
+3. BACKGROUND BUILD
+   └─▶ AI generates app code
+   └─▶ Saves to /generated-apps/
 
-4. BUILD (when ready)
-   └─▶ Claude Code ─▶ Generate app ─▶ /templates/
-
-5. DEPLOY
+4. DEPLOY
    └─▶ Vercel API ─▶ Production URL
+   └─▶ Or HostGator/Railway/custom hosting
 
-6. MONITOR
+5. MONITOR
    └─▶ n8n workflows ─▶ Telegram alerts
 ```
+
+### HOSTING OPTIONS
+
+| Provider | Cost | Best For | Auto-Deploy? |
+|----------|------|----------|--------------|
+| **Vercel** | FREE tier | Next.js apps | ✅ Yes |
+| **Railway** | $5/mo minimum | Full-stack apps | ✅ Yes |
+| **HostGator** | $3-10/mo | Traditional hosting | Manual |
+| **Fly.io** | FREE tier | Docker apps | ✅ Yes |
+| **Netlify** | FREE tier | Static sites | ✅ Yes |
+
+To add HostGator support, add these to your `.env`:
+```
+HOSTGATOR_FTP_HOST=your-domain.com
+HOSTGATOR_FTP_USER=your-username
+HOSTGATOR_FTP_PASS=your-password
+```
+
+---
+
+## ✅ WHAT WORKS vs 🚧 COMING SOON
+
+### ✅ FULLY WORKING NOW
+- Dashboard UI with idea input
+- API key entry directly in UI (no .env editing needed!)
+- Gemini FREE API integration for validation
+- SQLite database for persistence
+- Reddit idea discovery (no API needed)
+- Telegram notifications
+- Setup wizard with clickable signup links
+- n8n workflow templates (manual import)
+
+### 🚧 COMING SOON / PARTIAL
+- Automatic n8n workflow import (templates exist, auto-import in progress)
+- Full background build automation (validation works, full build pending)
+- HostGator FTP deployment
+- Stripe integration for payments
 
 ---
 

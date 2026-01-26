@@ -107,63 +107,99 @@ export default function Dashboard() {
     setIsProcessing(true);
     setLogs([]);
 
-    // Phase 1: Understanding
+    // Phase 1: Send to Build API
     setCurrentPhase("understanding");
     addLog("🎯 Analyzing your idea...");
     addLog(`Input: "${idea}"`);
-    await new Promise((r) => setTimeout(r, 1000));
 
-    // Save to database
     try {
-      const response = await fetch("/api/ideas", {
+      const response = await fetch("/api/build", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: idea,
-          source: "dashboard",
+          idea,
           runInBackground,
         }),
       });
+
       const result = await response.json();
-      if (result.success) {
-        addLog(`💾 Saved to database: ${result.idea.id}`);
+
+      if (!result.success) {
+        // Check if it needs setup
+        if (result.needsSetup) {
+          setCurrentPhase("ready");
+          addLog("");
+          addLog("⚠️ API KEY REQUIRED");
+          addLog("═══════════════════════════════════════════════════════");
+          addLog(result.error);
+          addLog("");
+          addLog("👉 Scroll down to 'Quick Setup' and add your Gemini API key (FREE!)");
+          setIsProcessing(false);
+          return;
+        }
+        throw new Error(result.error || "Build failed");
       }
-    } catch {
-      addLog("⚠️ Could not save to database (continuing anyway)");
+
+      // Phase 2: Show validation results
+      setCurrentPhase("validation");
+      addLog(`💾 Saved idea: ${result.ideaId}`);
+
+      if (result.validation) {
+        addLog(`📊 Validation Score: ${result.validation.score}/100`);
+        addLog(`🎯 Target Audience: ${result.validation.targetAudience}`);
+        addLog(`💰 Suggested Price: $${result.validation.targetPrice}/month`);
+        addLog(`⏱️ Build Complexity: ${result.validation.buildComplexity}`);
+        addLog(`📈 Recommendation: ${result.validation.recommendation}`);
+
+        if (result.validation.concerns?.length > 0) {
+          addLog("");
+          addLog("⚠️ Concerns:");
+          result.validation.concerns.forEach((c: string) => addLog(`   • ${c}`));
+        }
+
+        if (result.validation.appName) {
+          addLog("");
+          addLog(`📱 Suggested Name: ${result.validation.appName}`);
+        }
+      }
+
+      // Phase 3: Show next steps based on result
+      setCurrentPhase("ready");
+      addLog("");
+      addLog("═══════════════════════════════════════════════════════");
+
+      if (result.phase === "queued") {
+        addLog("🚀 BUILD QUEUED - Running in Background!");
+        addLog("═══════════════════════════════════════════════════════");
+        addLog("");
+        addLog(`Job ID: ${result.jobId}`);
+        addLog("The AI is now building your app...");
+        addLog("");
+        if (result.nextSteps) {
+          result.nextSteps.forEach((step: string) => addLog(`✓ ${step}`));
+        }
+      } else if (result.phase === "validation" && !result.validation?.isViable) {
+        addLog("❌ IDEA DID NOT PASS VALIDATION");
+        addLog("═══════════════════════════════════════════════════════");
+        addLog("");
+        addLog("Consider revising your idea based on the concerns above.");
+      } else {
+        addLog("✅ VALIDATION COMPLETE");
+        addLog("═══════════════════════════════════════════════════════");
+        addLog("");
+        if (result.buildCommand) {
+          addLog("To build manually, run:");
+          addLog(result.buildCommand);
+        }
+      }
+
+    } catch (error) {
+      setCurrentPhase("ready");
+      addLog("");
+      addLog("❌ ERROR");
+      addLog("═══════════════════════════════════════════════════════");
+      addLog(error instanceof Error ? error.message : "Unknown error");
     }
-    addLog("✅ Idea parsed successfully");
-
-    // Phase 2: Research
-    setCurrentPhase("research");
-    addLog("🔍 Researching market opportunity...");
-    await new Promise((r) => setTimeout(r, 1500));
-    addLog("📊 Analyzing competitors and market size...");
-    await new Promise((r) => setTimeout(r, 800));
-    addLog("💰 Estimated addressable market identified");
-
-    // Phase 3: Validation
-    setCurrentPhase("validation");
-    addLog("✅ Running $10k MRR feasibility check...");
-    await new Promise((r) => setTimeout(r, 1200));
-    addLog("📈 Validation Score: PASS - Proceed with build");
-
-    // Phase 4: Planning
-    setCurrentPhase("planning");
-    addLog("📝 Creating build plan...");
-    await new Promise((r) => setTimeout(r, 800));
-    addLog("🏗️ Tech stack: Next.js 14 + Clerk + Stripe + Neon");
-    addLog("📄 Components and API routes mapped");
-
-    // Ready
-    setCurrentPhase("ready");
-    addLog("");
-    addLog("═══════════════════════════════════════════════════════");
-    addLog("🚀 READY TO BUILD");
-    addLog("═══════════════════════════════════════════════════════");
-    addLog("");
-    addLog("Run this command in your terminal:");
-    addLog(`cd /Users/aharwelik/Desktop/Projects/v4.0-autonomous-factory`);
-    addLog(`claude "Build this app: ${idea}"`);
 
     setIsProcessing(false);
     fetchData(); // Refresh dashboard data
