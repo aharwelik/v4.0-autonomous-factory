@@ -23,6 +23,13 @@ const API_KEY_SETTINGS = [
   "TELEGRAM_CHAT_ID",
   "OPENAI_API_KEY",
   "GROK_API_KEY",
+  // Hostinger
+  "HOSTINGER_FTP_HOST",
+  "HOSTINGER_FTP_USER",
+  "HOSTINGER_FTP_PASS",
+  "HOSTINGER_GIT_URL",
+  // Railway
+  "RAILWAY_TOKEN",
 ];
 
 // Regular settings

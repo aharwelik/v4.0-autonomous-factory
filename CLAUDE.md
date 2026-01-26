@@ -127,7 +127,7 @@ chmod +x scripts/setup.sh && ./scripts/setup.sh
 
 4. DEPLOY
    └─▶ Vercel API ─▶ Production URL
-   └─▶ Or HostGator/Railway/custom hosting
+   └─▶ Or Hostinger/Railway/custom hosting
 
 5. MONITOR
    └─▶ n8n workflows ─▶ Telegram alerts
@@ -139,22 +139,22 @@ chmod +x scripts/setup.sh && ./scripts/setup.sh
 |----------|------|----------|--------------|
 | **Vercel** | FREE tier | Next.js apps | ✅ Yes |
 | **Railway** | $5/mo minimum | Full-stack apps | ✅ Yes |
-| **HostGator** | $3-10/mo | Traditional hosting | Manual |
+| **Hostinger** | $3-12/mo | Traditional + Node.js | ✅ Yes (Git deploy) |
 | **Fly.io** | FREE tier | Docker apps | ✅ Yes |
 | **Netlify** | FREE tier | Static sites | ✅ Yes |
 
-To add HostGator support, add these to your `.env`:
+To add Hostinger support, add these to your `.env`:
 ```
-HOSTGATOR_FTP_HOST=your-domain.com
-HOSTGATOR_FTP_USER=your-username
-HOSTGATOR_FTP_PASS=your-password
+HOSTINGER_FTP_HOST=your-domain.com
+HOSTINGER_FTP_USER=your-username
+HOSTINGER_FTP_PASS=your-password
 ```
 
 ---
 
-## ✅ WHAT WORKS vs 🚧 COMING SOON
+## ✅ WHAT WORKS NOW
 
-### ✅ FULLY WORKING NOW
+### ✅ FULLY WORKING
 - Dashboard UI with idea input
 - API key entry directly in UI (no .env editing needed!)
 - Gemini FREE API integration for validation
@@ -162,13 +162,18 @@ HOSTGATOR_FTP_PASS=your-password
 - Reddit idea discovery (no API needed)
 - Telegram notifications
 - Setup wizard with clickable signup links
-- n8n workflow templates (manual import)
+- n8n workflow auto-import via API
+- **Full background build automation** - AI generates entire apps!
+- **Visual build progress** - See each step as it happens
+- **AI image generation** - Gemini creates preview images
+- **Deploy to Vercel** - One-click deployment
+- **Deploy to Hostinger** - Git or FTP deploy
+- **Deploy to Railway** - Full-stack apps
 
-### 🚧 COMING SOON / PARTIAL
-- Automatic n8n workflow import (templates exist, auto-import in progress)
-- Full background build automation (validation works, full build pending)
-- HostGator FTP deployment
-- Stripe integration for payments
+### 🚧 COMING SOON
+- Stripe payment integration
+- PostHog analytics auto-setup
+- More app templates
 
 ---
 

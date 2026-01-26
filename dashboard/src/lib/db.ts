@@ -39,10 +39,14 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS apps (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    display_name TEXT,
     idea_id TEXT REFERENCES ideas(id),
     status TEXT DEFAULT 'building',
     tech_stack TEXT,
     deploy_url TEXT,
+    path TEXT,
+    spec TEXT,
+    preview_image TEXT,
     mrr REAL DEFAULT 0,
     customers INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -88,11 +92,12 @@ db.exec(`
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
-  -- Background jobs table
+  -- Background jobs table (payload renamed to data for clarity)
   CREATE TABLE IF NOT EXISTS background_jobs (
     id TEXT PRIMARY KEY,
     type TEXT NOT NULL,
     payload TEXT,
+    data TEXT,
     status TEXT DEFAULT 'pending',
     priority INTEGER DEFAULT 0,
     run_in_background INTEGER DEFAULT 1,
@@ -235,10 +240,14 @@ export const ideas = {
 export interface App {
   id: string;
   name: string;
+  display_name?: string;
   idea_id?: string;
-  status: 'building' | 'deployed' | 'live' | 'paused';
+  status: 'building' | 'built' | 'deployed' | 'live' | 'paused';
   tech_stack?: string;
   deploy_url?: string;
+  path?: string;
+  spec?: string;
+  preview_image?: string;
   mrr: number;
   customers: number;
   created_at: string;
@@ -246,12 +255,25 @@ export interface App {
 }
 
 export const apps = {
-  create: (app: Omit<App, 'created_at' | 'updated_at'>): App => {
+  create: (app: { id: string; name: string; displayName?: string; ideaId?: string; status?: string; techStack?: string; deployUrl?: string; path?: string; spec?: string; previewImage?: string; mrr?: number; customers?: number }): App => {
     const stmt = db.prepare(`
-      INSERT INTO apps (id, name, idea_id, status, tech_stack, deploy_url, mrr, customers)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO apps (id, name, display_name, idea_id, status, tech_stack, deploy_url, path, spec, preview_image, mrr, customers)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    stmt.run(app.id, app.name, app.idea_id, app.status, app.tech_stack, app.deploy_url, app.mrr, app.customers);
+    stmt.run(
+      app.id,
+      app.name,
+      app.displayName || app.name,
+      app.ideaId,
+      app.status || 'building',
+      app.techStack,
+      app.deployUrl,
+      app.path,
+      app.spec,
+      app.previewImage,
+      app.mrr || 0,
+      app.customers || 0
+    );
     return apps.get(app.id)!;
   },
 
@@ -433,7 +455,8 @@ export interface BackgroundJob {
   id: string;
   type: string;
   payload?: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  data?: string;
+  status: 'pending' | 'queued' | 'running' | 'completed' | 'failed';
   priority: number;
   run_in_background: number;
   created_at: string;
@@ -506,6 +529,31 @@ export const backgroundJobs = {
 
   running: (): BackgroundJob[] => {
     return db.prepare("SELECT * FROM background_jobs WHERE status = 'running'").all() as BackgroundJob[];
+  },
+
+  update: (id: string, updates: Partial<BackgroundJob> & { startedAt?: string; completedAt?: string }): void => {
+    const fieldMap: Record<string, string> = {
+      status: 'status',
+      startedAt: 'started_at',
+      completedAt: 'completed_at',
+      result: 'result',
+      error: 'error',
+      data: 'data'
+    };
+
+    const dbUpdates: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      const dbKey = fieldMap[key] || key;
+      dbUpdates[dbKey] = value;
+    }
+
+    const fields = Object.keys(dbUpdates);
+    if (fields.length === 0) return;
+
+    const setClause = fields.map(f => `${f} = ?`).join(', ');
+    const values = fields.map(f => dbUpdates[f]);
+
+    db.prepare(`UPDATE background_jobs SET ${setClause} WHERE id = ?`).run(...values, id);
   }
 };
 

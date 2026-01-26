@@ -15,6 +15,7 @@ import { SetupGuide } from "@/components/SetupGuide";
 import { IdeaDiscovery } from "@/components/IdeaDiscovery";
 import { TelegramNotifications } from "@/components/TelegramNotifications";
 import { WorkflowManager } from "@/components/WorkflowManager";
+import BuildAppVisual from "@/components/BuildAppVisual";
 import {
   Settings,
   RefreshCw,
@@ -30,6 +31,7 @@ import {
   Rocket,
   AlertTriangle,
   Workflow,
+  Hammer,
 } from "lucide-react";
 
 interface DashboardData {
@@ -96,6 +98,10 @@ export default function Dashboard() {
   // Settings panel state
   const [showSettings, setShowSettings] = useState(false);
   const [runInBackground, setRunInBackground] = useState(true);
+
+  // Build visual state
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [showBuildVisual, setShowBuildVisual] = useState(false);
 
   const addLog = (message: string) => {
     setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
@@ -175,9 +181,13 @@ export default function Dashboard() {
         addLog(`Job ID: ${result.jobId}`);
         addLog("The AI is now building your app...");
         addLog("");
+        addLog("👉 Check the 'Build' tab below to see visual progress!");
         if (result.nextSteps) {
           result.nextSteps.forEach((step: string) => addLog(`✓ ${step}`));
         }
+        // Set job ID for visual tracking
+        setActiveJobId(result.jobId);
+        setShowBuildVisual(true);
       } else if (result.phase === "validation" && !result.validation?.isViable) {
         addLog("❌ IDEA DID NOT PASS VALIDATION");
         addLog("═══════════════════════════════════════════════════════");
@@ -452,8 +462,13 @@ Target: Freelance designers making $50k-100k/year. Price: $19/month."`}
           </div>
         </div>
 
-        <Tabs defaultValue="pipeline" className="space-y-4">
+        <Tabs defaultValue={showBuildVisual ? "build" : "pipeline"} className="space-y-4">
           <TabsList className="bg-muted">
+            <TabsTrigger value="build" className="gap-2">
+              <Hammer className="w-4 h-4" />
+              Build
+              {activeJobId && <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />}
+            </TabsTrigger>
             <TabsTrigger value="pipeline" className="gap-2">
               <BarChart3 className="w-4 h-4" />
               Pipeline
@@ -480,6 +495,36 @@ Target: Freelance designers making $50k-100k/year. Price: $19/month."`}
             </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="build">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Hammer className="w-5 h-5" />
+                  Build Progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {idea ? (
+                  <BuildAppVisual
+                    jobId={activeJobId || undefined}
+                    idea={idea}
+                    onComplete={(result) => {
+                      if (result.success) {
+                        addLog(`✅ App built: ${result.appName}`);
+                        setActiveJobId(null);
+                        fetchData();
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Rocket className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Enter an idea above and click "Build This App" to see the build progress here.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
           <TabsContent value="pipeline">
             <PipelineHealth data={data.pipeline} />
           </TabsContent>
