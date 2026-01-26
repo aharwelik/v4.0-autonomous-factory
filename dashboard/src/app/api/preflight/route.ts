@@ -64,7 +64,7 @@ export async function GET() {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // OPTIONAL BUT RECOMMENDED: Deployment
+  // REQUIRED: At least ONE deployment option
   // ═══════════════════════════════════════════════════════════════════════════
 
   const vercelToken = settings.get<string>("VERCEL_TOKEN");
@@ -74,11 +74,12 @@ export async function GET() {
 
   const hasAnyDeploy = !!(vercelToken || hostingerGit || hostingerFtp || railwayToken);
 
+  // At least one deploy option is REQUIRED to publish your app
   checks.push({
     name: "Vercel Token (FREE - Recommended)",
     key: "VERCEL_TOKEN",
-    status: vercelToken ? "configured" : "optional",
-    required: false,
+    status: vercelToken ? "configured" : (hasAnyDeploy ? "optional" : "missing"),
+    required: !hasAnyDeploy, // Required if no other deploy option
     description: "Auto-deploy to Vercel. FREE unlimited deploys for hobby projects.",
     howToGet: "https://vercel.com/account/tokens",
     freeOption: true,
@@ -87,10 +88,19 @@ export async function GET() {
   checks.push({
     name: "Hostinger Git/FTP",
     key: "HOSTINGER_GIT_URL",
-    status: (hostingerGit || hostingerFtp) ? "configured" : "optional",
-    required: false,
-    description: "Deploy to your Hostinger hosting.",
+    status: (hostingerGit || hostingerFtp) ? "configured" : (hasAnyDeploy ? "optional" : "missing"),
+    required: !hasAnyDeploy, // Required if no other deploy option
+    description: "Deploy to your Hostinger hosting. Use if you have Hostinger account.",
     howToGet: "Hostinger hPanel → Websites → Git or FTP Accounts",
+  });
+
+  checks.push({
+    name: "Railway Token",
+    key: "RAILWAY_TOKEN",
+    status: railwayToken ? "configured" : (hasAnyDeploy ? "optional" : "missing"),
+    required: !hasAnyDeploy, // Required if no other deploy option
+    description: "Deploy full-stack apps. $5/mo minimum after free trial.",
+    howToGet: "https://railway.app/account/tokens",
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -150,16 +160,23 @@ export async function GET() {
   let statusMessage = "";
   let statusEmoji = "";
 
-  if (!canBuild) {
+  if (!canBuild && !canDeploy) {
     statusEmoji = "🔴";
-    statusMessage = "SETUP REQUIRED: Add an AI API key to start building apps.";
+    statusMessage = "SETUP REQUIRED: Add AI key + hosting to build and publish apps.";
+  } else if (!canBuild) {
+    statusEmoji = "🔴";
+    statusMessage = "SETUP REQUIRED: Add an AI API key (Gemini is FREE!) to build apps.";
   } else if (!canDeploy) {
     statusEmoji = "🟡";
-    statusMessage = "READY TO BUILD! Add Vercel/Hostinger to auto-deploy.";
+    statusMessage = "ADD HOSTING: You can build but need Vercel/Hostinger/Railway to publish.";
   } else {
     statusEmoji = "🟢";
     statusMessage = "FULLY CONFIGURED! Ready to build and deploy apps.";
   }
+
+  // Group blockers by category for clearer UI
+  const aiBlockers = missing.filter(m => ["GEMINI_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"].includes(m.key));
+  const deployBlockers = missing.filter(m => ["VERCEL_TOKEN", "HOSTINGER_GIT_URL", "RAILWAY_TOKEN"].includes(m.key));
 
   return NextResponse.json({
     success: true,
@@ -168,7 +185,7 @@ export async function GET() {
     status: {
       emoji: statusEmoji,
       message: statusMessage,
-      level: canBuild ? (canDeploy ? "ready" : "partial") : "blocked",
+      level: canBuild && canDeploy ? "ready" : (canBuild ? "partial" : "blocked"),
     },
     summary: {
       configured: configured.length,
@@ -177,18 +194,34 @@ export async function GET() {
       total: checks.length,
     },
     checks,
-    // Quick access to what's blocking
+    // Quick access to what's blocking - grouped by type
     blockers: missing.map(m => ({
       name: m.name,
       key: m.key,
       howToGet: m.howToGet,
       freeOption: m.freeOption,
+      category: ["GEMINI_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"].includes(m.key) ? "ai" : "deploy",
     })),
+    // Specific missing categories
+    missingAI: !hasAnyAI,
+    missingDeploy: !hasAnyDeploy,
+    // AI options (pick one)
+    aiOptions: !hasAnyAI ? [
+      { name: "Gemini (FREE!)", key: "GEMINI_API_KEY", url: "https://aistudio.google.com/app/apikey", free: true, recommended: true },
+      { name: "Anthropic Claude", key: "ANTHROPIC_API_KEY", url: "https://console.anthropic.com/settings/keys", free: false },
+      { name: "OpenAI", key: "OPENAI_API_KEY", url: "https://platform.openai.com/api-keys", free: false },
+    ] : null,
+    // Deploy options (pick one)
+    deployOptions: !hasAnyDeploy ? [
+      { name: "Vercel (FREE!)", key: "VERCEL_TOKEN", url: "https://vercel.com/account/tokens", free: true, recommended: true },
+      { name: "Hostinger", key: "HOSTINGER_GIT_URL", url: "https://hpanel.hostinger.com", free: false },
+      { name: "Railway", key: "RAILWAY_TOKEN", url: "https://railway.app/account/tokens", free: false },
+    ] : null,
     // Recommendations
     recommendations: [
-      !geminiKey && { priority: 1, message: "Add Gemini API key (FREE!) - Required for AI", url: "https://aistudio.google.com/app/apikey" },
-      !vercelToken && canBuild && { priority: 2, message: "Add Vercel token (FREE!) - Auto-deploy apps", url: "https://vercel.com/account/tokens" },
-      !telegramToken && canBuild && { priority: 3, message: "Add Telegram bot (FREE!) - Get build notifications", url: "https://t.me/BotFather" },
+      !geminiKey && !hasAnyAI && { priority: 1, message: "Add Gemini API key (FREE!) - Required for AI", url: "https://aistudio.google.com/app/apikey" },
+      !vercelToken && !hasAnyDeploy && { priority: 2, message: "Add Vercel token (FREE!) or Hostinger - Required to publish", url: "https://vercel.com/account/tokens" },
+      !telegramToken && canBuild && canDeploy && { priority: 3, message: "Add Telegram bot (FREE!) - Get build notifications", url: "https://t.me/BotFather" },
     ].filter(Boolean),
   });
 }

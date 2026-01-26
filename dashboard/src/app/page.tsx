@@ -107,8 +107,12 @@ export default function Dashboard() {
   const [preflightStatus, setPreflightStatus] = useState<{
     canBuild: boolean;
     canDeploy: boolean;
+    missingAI: boolean;
+    missingDeploy: boolean;
     status: { emoji: string; message: string; level: string };
-    blockers: Array<{ name: string; key: string; howToGet: string; freeOption?: boolean }>;
+    blockers: Array<{ name: string; key: string; howToGet: string; freeOption?: boolean; category: string }>;
+    aiOptions?: Array<{ name: string; key: string; url: string; free: boolean; recommended?: boolean }>;
+    deployOptions?: Array<{ name: string; key: string; url: string; free: boolean; recommended?: boolean }>;
     recommendations: Array<{ priority: number; message: string; url: string }>;
   } | null>(null);
 
@@ -413,54 +417,80 @@ export default function Dashboard() {
           </div>
 
           {/* PREFLIGHT STATUS - SHOW WHAT'S NEEDED */}
-          {preflightStatus && !preflightStatus.canBuild && (
-            <Card className="bg-red-950/50 border-red-500/50 mb-4">
+          {preflightStatus && (!preflightStatus.canBuild || !preflightStatus.canDeploy) && (
+            <Card className={`mb-4 ${
+              !preflightStatus.canBuild ? "bg-red-950/50 border-red-500/50" : "bg-yellow-950/30 border-yellow-500/30"
+            }`}>
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <h3 className="font-bold text-red-300 mb-2">
+                  <AlertTriangle className={`w-6 h-6 flex-shrink-0 mt-0.5 ${
+                    !preflightStatus.canBuild ? "text-red-400" : "text-yellow-400"
+                  }`} />
+                  <div className="flex-1 space-y-4">
+                    <h3 className={`font-bold ${!preflightStatus.canBuild ? "text-red-300" : "text-yellow-300"}`}>
                       {preflightStatus.status.emoji} {preflightStatus.status.message}
                     </h3>
-                    <div className="space-y-2">
-                      {preflightStatus.blockers.map((blocker) => (
-                        <div key={blocker.key} className="flex items-center justify-between bg-red-900/30 rounded-lg p-3">
-                          <div>
-                            <span className="text-white font-medium">{blocker.name}</span>
-                            {blocker.freeOption && (
-                              <Badge className="ml-2 bg-green-600">FREE</Badge>
-                            )}
-                          </div>
-                          <a
-                            href={blocker.howToGet}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded transition-colors"
-                          >
-                            Get Key →
-                          </a>
+
+                    {/* AI Options - Pick ONE */}
+                    {preflightStatus.missingAI && preflightStatus.aiOptions && (
+                      <div className="bg-black/30 rounded-lg p-3">
+                        <p className="text-sm font-medium text-white mb-2">
+                          ❶ Pick ONE AI Provider (required to build):
+                        </p>
+                        <div className="space-y-2">
+                          {preflightStatus.aiOptions.map((opt) => (
+                            <div key={opt.key} className="flex items-center justify-between bg-gray-800/50 rounded p-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-white">{opt.name}</span>
+                                {opt.free && <Badge className="bg-green-600 text-xs">FREE</Badge>}
+                                {opt.recommended && <Badge className="bg-blue-600 text-xs">Recommended</Badge>}
+                              </div>
+                              <a
+                                href={opt.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition-colors"
+                              >
+                                Get Key →
+                              </a>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                    <p className="text-red-300/80 text-sm mt-3">
-                      👇 Scroll down to "Quick Setup" to add your API keys
+                      </div>
+                    )}
+
+                    {/* Deploy Options - Pick ONE */}
+                    {preflightStatus.missingDeploy && preflightStatus.deployOptions && (
+                      <div className="bg-black/30 rounded-lg p-3">
+                        <p className="text-sm font-medium text-white mb-2">
+                          ❷ Pick ONE Hosting Provider (required to publish):
+                        </p>
+                        <div className="space-y-2">
+                          {preflightStatus.deployOptions.map((opt) => (
+                            <div key={opt.key} className="flex items-center justify-between bg-gray-800/50 rounded p-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-white">{opt.name}</span>
+                                {opt.free && <Badge className="bg-green-600 text-xs">FREE</Badge>}
+                                {opt.recommended && <Badge className="bg-blue-600 text-xs">Recommended</Badge>}
+                              </div>
+                              <a
+                                href={opt.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition-colors"
+                              >
+                                Get Key →
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <p className={`text-sm ${!preflightStatus.canBuild ? "text-red-300/80" : "text-yellow-300/80"}`}>
+                      👇 After getting your keys, scroll down to "Quick Setup" to save them
                     </p>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* PREFLIGHT STATUS - PARTIAL (can build, can't deploy) */}
-          {preflightStatus && preflightStatus.canBuild && !preflightStatus.canDeploy && (
-            <Card className="bg-yellow-950/30 border-yellow-500/30 mb-4">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2 text-yellow-300 text-sm">
-                  <span>{preflightStatus.status.emoji}</span>
-                  <span>{preflightStatus.status.message}</span>
-                  <span className="text-yellow-400/60 ml-2">
-                    (Add Vercel token below for auto-deploy)
-                  </span>
                 </div>
               </CardContent>
             </Card>
