@@ -1,0 +1,24 @@
+{
+  "name": "build-me-a",
+  "displayName": "BUILD me a",
+  "tagline": "BUILD me a website for a log tool that is cutting edge, it w",
+  "techStack": {
+    "framework": "Next.js 14",
+    "styling": "Tailwind CSS"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Landing"
+    },
+    {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    }
+  ],
+  "features": [
+    {
+      "name": "Core functionality"
+    }
+  ]
+}

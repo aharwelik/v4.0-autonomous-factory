@@ -1,0 +1,24 @@
+{
+  "name": "makemean",
+  "displayName": "Makemean",
+  "tagline": "Make me an MSP company that sells log analytics tools to tro",
+  "techStack": {
+    "framework": "Next.js 14",
+    "styling": "Tailwind CSS"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Landing"
+    },
+    {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    }
+  ],
+  "features": [
+    {
+      "name": "Core functionality"
+    }
+  ]
+}

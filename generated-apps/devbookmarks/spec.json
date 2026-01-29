@@ -1,0 +1,30 @@
+{
+  "name": "devbookmarks",
+  "displayName": "DevBookmarks",
+  "tagline": "Organize your development resources",
+  "techStack": {
+    "framework": "Next.js 14",
+    "styling": "Tailwind CSS"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Landing"
+    },
+    {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    }
+  ],
+  "features": [
+    {
+      "name": "Bookmark storage"
+    },
+    {
+      "name": "Tag organization"
+    },
+    {
+      "name": "Search"
+    }
+  ]
+}

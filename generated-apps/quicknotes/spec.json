@@ -1,0 +1,30 @@
+{
+  "name": "quicknotes",
+  "displayName": "QuickNotes",
+  "tagline": "Take notes quickly and efficiently",
+  "techStack": {
+    "framework": "Next.js 14",
+    "styling": "Tailwind CSS"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Landing"
+    },
+    {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    }
+  ],
+  "features": [
+    {
+      "name": "Note creation"
+    },
+    {
+      "name": "Categories"
+    },
+    {
+      "name": "Search"
+    }
+  ]
+}

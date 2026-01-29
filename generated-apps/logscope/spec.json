@@ -1,0 +1,36 @@
+{
+  "name": "logscope",
+  "displayName": "LogScope",
+  "tagline": "Real-time log aggregation and analysis for it departments and msps",
+  "techStack": {
+    "framework": "Next.js 14",
+    "styling": "Tailwind CSS"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Landing"
+    },
+    {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    }
+  ],
+  "features": [
+    {
+      "name": "Real-time log aggregation and analysis"
+    },
+    {
+      "name": "Intelligent error pattern detection"
+    },
+    {
+      "name": "Automated alerting and notifications"
+    },
+    {
+      "name": "Root cause analysis tools"
+    },
+    {
+      "name": "Step-by-step debugging workflows"
+    }
+  ]
+}

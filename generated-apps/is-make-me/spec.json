@@ -1,0 +1,24 @@
+{
+  "name": "is-make-me",
+  "displayName": "is Make me",
+  "tagline": "is Make me A company that cpatures all logs on windows sytem",
+  "techStack": {
+    "framework": "Next.js 14",
+    "styling": "Tailwind CSS"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Landing"
+    },
+    {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    }
+  ],
+  "features": [
+    {
+      "name": "Core functionality"
+    }
+  ]
+}

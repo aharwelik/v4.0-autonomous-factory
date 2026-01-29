@@ -1,0 +1,30 @@
+{
+  "name": "recipebox",
+  "displayName": "RecipeBox",
+  "tagline": "Organize and share your favorite recipes",
+  "techStack": {
+    "framework": "Next.js 14",
+    "styling": "Tailwind CSS"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Landing"
+    },
+    {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    }
+  ],
+  "features": [
+    {
+      "name": "Recipe storage"
+    },
+    {
+      "name": "Photo uploads"
+    },
+    {
+      "name": "Recipe sharing"
+    }
+  ]
+}

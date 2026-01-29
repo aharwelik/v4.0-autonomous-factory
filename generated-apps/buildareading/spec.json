@@ -1,0 +1,24 @@
+{
+  "name": "buildareading",
+  "displayName": "Buildareading",
+  "tagline": "Build a reading list tracker",
+  "techStack": {
+    "framework": "Next.js 14",
+    "styling": "Tailwind CSS"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Landing"
+    },
+    {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    }
+  ],
+  "features": [
+    {
+      "name": "Core functionality"
+    }
+  ]
+}

@@ -44,12 +44,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get AI provider (prioritizes FREE Gemini)
+    // Get AI provider (prioritizes FREE Gemini, then cheap DeepSeek/GLM)
     const env = {
-      GEMINI_API_KEY: settings.get<string>("GEMINI_API_KEY"),
-      ANTHROPIC_API_KEY: settings.get<string>("ANTHROPIC_API_KEY"),
-      OPENAI_API_KEY: settings.get<string>("OPENAI_API_KEY"),
-      GROK_API_KEY: settings.get<string>("GROK_API_KEY"),
+      GEMINI_API_KEY: settings.get<string>("GEMINI_API_KEY") || undefined,
+      DEEPSEEK_API_KEY: settings.get<string>("DEEPSEEK_API_KEY") || undefined,
+      GLM_API_KEY: settings.get<string>("GLM_API_KEY") || undefined,
+      ANTHROPIC_API_KEY: settings.get<string>("ANTHROPIC_API_KEY") || undefined,
+      OPENAI_API_KEY: settings.get<string>("OPENAI_API_KEY") || undefined,
+      GROK_API_KEY: settings.get<string>("GROK_API_KEY") || undefined,
     };
 
     const provider = getBestProvider(env);
@@ -74,6 +76,10 @@ export async function POST(request: NextRequest) {
       source: "dashboard",
       score: 0,
       status: "validating",
+      auto_discovered: 0,
+      signal_count: 0,
+      search_growth: 0,
+      competitor_count: 0,
     });
 
     // Step 1: Quick validation with AI

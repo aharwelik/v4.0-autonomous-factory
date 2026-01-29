@@ -1,0 +1,30 @@
+{
+  "name": "fittrack",
+  "displayName": "FitTrack",
+  "tagline": "Track your fitness journey",
+  "techStack": {
+    "framework": "Next.js 14",
+    "styling": "Tailwind CSS"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Landing"
+    },
+    {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    }
+  ],
+  "features": [
+    {
+      "name": "Workout logging"
+    },
+    {
+      "name": "Progress tracking"
+    },
+    {
+      "name": "Goals"
+    }
+  ]
+}

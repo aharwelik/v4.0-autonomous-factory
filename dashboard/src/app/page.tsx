@@ -16,6 +16,7 @@ import { IdeaDiscovery } from "@/components/IdeaDiscovery";
 import { IdeasManager } from "@/components/IdeasManager";
 import { TelegramNotifications } from "@/components/TelegramNotifications";
 import { WorkflowManager } from "@/components/WorkflowManager";
+import { AutoDiscoveredIdeas } from "@/components/AutoDiscoveredIdeas";
 import BuildAppVisual from "@/components/BuildAppVisual";
 import {
   Settings,
@@ -33,6 +34,7 @@ import {
   AlertTriangle,
   Workflow,
   Hammer,
+  Sparkles,
 } from "lucide-react";
 
 interface DashboardData {
@@ -81,6 +83,12 @@ interface DashboardData {
     monthly: number;
     alerts: { warning: number; critical: number };
   };
+  status: {
+    hasRealData: boolean;
+    runningAgents: number;
+    pendingJobs: number;
+    dbConnected: boolean;
+  };
   generatedAt: string;
 }
 
@@ -103,6 +111,14 @@ export default function Dashboard() {
   // Build visual state
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [showBuildVisual, setShowBuildVisual] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("pipeline");
+
+  // Cost tracking state
+  const [costSummary, setCostSummary] = useState<{
+    today: number;
+    month: number;
+    formatted: { today: string; month: string };
+  } | null>(null);
 
   // Preflight check state
   const [preflightStatus, setPreflightStatus] = useState<{
@@ -177,7 +193,7 @@ export default function Dashboard() {
           if (!line.trim()) continue;
 
           const eventMatch = line.match(/event: (\w+)/);
-          const dataMatch = line.match(/data: (.+)/s);
+          const dataMatch = line.match(/data: ([\s\S]+)/);
 
           if (eventMatch && dataMatch) {
             const event = eventMatch[1];
@@ -270,10 +286,12 @@ export default function Dashboard() {
                   addLog("📦 Next Steps:");
                   data.nextSteps?.forEach((s: string) => addLog(`    → ${s}`));
                   addLog("");
-                  addLog("👉 Click the 'Build' tab below to watch live progress!");
+                  addLog("🚀 Auto-switching to Build tab to watch live progress...");
 
                   setActiveJobId(data.jobId);
                   setShowBuildVisual(true);
+                  // Auto-switch to Build tab
+                  setTimeout(() => setActiveTab("build"), 500);
 
                   if (!preflightStatus?.canDeploy) {
                     addLog("");
@@ -380,11 +398,33 @@ export default function Dashboard() {
     }
   };
 
+  // Fetch cost summary
+  const fetchCosts = async () => {
+    try {
+      const res = await fetch("/api/costs");
+      const data = await res.json();
+      if (data.success) {
+        setCostSummary({
+          today: data.today,
+          month: data.month,
+          formatted: data.formatted,
+        });
+      }
+    } catch (error) {
+      console.error("Cost fetch failed:", error);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     fetchPreflight();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+    fetchCosts();
+    const dataInterval = setInterval(fetchData, 30000);
+    const costInterval = setInterval(fetchCosts, 30000); // Update costs every 30s
+    return () => {
+      clearInterval(dataInterval);
+      clearInterval(costInterval);
+    };
   }, []);
 
   const handleRefresh = () => {
@@ -430,8 +470,28 @@ export default function Dashboard() {
       {/* HERO SECTION - THE MAIN FEATURE - TYPE YOUR IDEA HERE                   */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       <div className="bg-gradient-to-b from-slate-900 to-background border-b">
-        {/* Top Bar with Settings */}
-        <div className="flex justify-end gap-2 p-4">
+        {/* Top Bar with Cost Display and Settings */}
+        <div className="flex justify-end items-center gap-2 p-4">
+          {/* Live Cost Display */}
+          {costSummary && (
+            <div className="flex items-center gap-3 px-3 py-1.5 bg-muted/50 rounded-lg text-sm font-mono">
+              <div className="flex items-center gap-1">
+                <Wallet className="w-3.5 h-3.5 text-green-400" />
+                <span className="text-muted-foreground">Today:</span>
+                <span className={costSummary.today > 1 ? "text-yellow-400" : "text-green-400"}>
+                  {costSummary.formatted.today}
+                </span>
+              </div>
+              <span className="text-muted-foreground">|</span>
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground">Month:</span>
+                <span className={costSummary.month > 10 ? "text-yellow-400" : "text-green-400"}>
+                  {costSummary.formatted.month}
+                </span>
+              </div>
+            </div>
+          )}
+
           <Button
             variant={runInBackground ? "default" : "outline"}
             size="sm"
@@ -727,7 +787,12 @@ Then come back here and describe your app idea.`
       <div className="max-w-6xl mx-auto px-6 pb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-muted-foreground">
-            Monitoring Dashboard <Badge variant="outline">Demo Data</Badge>
+            Monitoring Dashboard
+            {!data.status.hasRealData && (
+              <Badge variant="outline" className="ml-2">
+                Demo Data - Build Your First App to See Real Metrics
+              </Badge>
+            )}
           </h2>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
@@ -744,7 +809,24 @@ Then come back here and describe your app idea.`
           </div>
         </div>
 
-        <Tabs defaultValue={showBuildVisual ? "build" : "pipeline"} className="space-y-4">
+        {/* Demo Data Notice */}
+        {!data.status.hasRealData && (
+          <Card className="mb-4 border-blue-200 bg-blue-50">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <div className="text-2xl">ℹ️</div>
+                <div>
+                  <p className="font-semibold text-sm mb-1">You're viewing demo data</p>
+                  <p className="text-xs text-muted-foreground">
+                    The metrics and charts below are examples. Build your first app above to see real data from your apps.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="bg-muted">
             <TabsTrigger value="build" className="gap-2">
               <Hammer className="w-4 h-4" />
@@ -774,6 +856,10 @@ Then come back here and describe your app idea.`
             <TabsTrigger value="workflows" className="gap-2">
               <Workflow className="w-4 h-4" />
               Workflows
+            </TabsTrigger>
+            <TabsTrigger value="auto-discover" className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              Auto-Discover
             </TabsTrigger>
           </TabsList>
 
@@ -824,6 +910,9 @@ Then come back here and describe your app idea.`
           </TabsContent>
           <TabsContent value="workflows">
             <WorkflowManager />
+          </TabsContent>
+          <TabsContent value="auto-discover">
+            <AutoDiscoveredIdeas />
           </TabsContent>
         </Tabs>
 

@@ -29,11 +29,13 @@ export async function GET() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   const geminiKey = settings.get<string>("GEMINI_API_KEY");
+  const deepseekKey = settings.get<string>("DEEPSEEK_API_KEY");
+  const glmKey = settings.get<string>("GLM_API_KEY");
   const anthropicKey = settings.get<string>("ANTHROPIC_API_KEY");
   const openaiKey = settings.get<string>("OPENAI_API_KEY");
   const grokKey = settings.get<string>("GROK_API_KEY");
 
-  const hasAnyAI = !!(geminiKey || anthropicKey || openaiKey || grokKey);
+  const hasAnyAI = !!(geminiKey || deepseekKey || glmKey || anthropicKey || openaiKey || grokKey);
 
   checks.push({
     name: "Gemini API (FREE - Recommended)",
@@ -43,6 +45,24 @@ export async function GET() {
     description: "FREE AI for validation and code generation. 1M tokens/day free!",
     howToGet: "https://aistudio.google.com/app/apikey",
     freeOption: true,
+  });
+
+  checks.push({
+    name: "DeepSeek API (CHEAPEST)",
+    key: "DEEPSEEK_API_KEY",
+    status: deepseekKey ? "configured" : "optional",
+    required: false,
+    description: "Best value AI - $0.14/1M input tokens. Great for code generation.",
+    howToGet: "https://platform.deepseek.com/api_keys",
+  });
+
+  checks.push({
+    name: "GLM API (Zhipu)",
+    key: "GLM_API_KEY",
+    status: glmKey ? "configured" : "optional",
+    required: false,
+    description: "Ultra cheap flat rate - $0.10/1M tokens for input AND output.",
+    howToGet: "https://open.bigmodel.cn/",
   });
 
   checks.push({

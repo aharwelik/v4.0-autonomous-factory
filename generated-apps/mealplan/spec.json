@@ -1,0 +1,30 @@
+{
+  "name": "mealplan",
+  "displayName": "MealPlan",
+  "tagline": "Plan meals effortlessly",
+  "techStack": {
+    "framework": "Next.js 14",
+    "styling": "Tailwind CSS"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Landing"
+    },
+    {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    }
+  ],
+  "features": [
+    {
+      "name": "Meal planning"
+    },
+    {
+      "name": "Shopping lists"
+    },
+    {
+      "name": "Recipes"
+    }
+  ]
+}

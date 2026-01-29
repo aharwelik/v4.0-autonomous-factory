@@ -1,0 +1,27 @@
+{
+  "name": "taskmaster",
+  "displayName": "TaskMaster",
+  "tagline": "Manage tasks efficiently",
+  "techStack": {
+    "framework": "Next.js 14",
+    "styling": "Tailwind CSS"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Landing"
+    },
+    {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    }
+  ],
+  "features": [
+    {
+      "name": "Task creation"
+    },
+    {
+      "name": "Team collaboration"
+    }
+  ]
+}

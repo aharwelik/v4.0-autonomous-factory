@@ -60,8 +60,9 @@ export default function BuildAppVisual({ jobId, idea, onComplete }: BuildAppVisu
     if (!jobId) return;
 
     setIsBuilding(true);
-    addLog("Checking build job status...");
+    addLog("🔍 Connecting to build system...");
 
+    let lastStatus = "";
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch(`/api/build?jobId=${jobId}`);
@@ -74,12 +75,18 @@ export default function BuildAppVisual({ jobId, idea, onComplete }: BuildAppVisu
           if (job.status === "queued") {
             updateStep(0, "completed"); // Validation already done by stream API
             updateStep(1, "running");
-            addLog("Job queued - starting build processor...");
+
+            // Only log once when status changes
+            if (lastStatus !== "queued") {
+              lastStatus = "queued";
+              addLog("✅ Idea validated - queuing build job...");
+            }
 
             // AUTO-TRIGGER the build processor if not already triggered
             if (!buildTriggered) {
               setBuildTriggered(true);
-              addLog("🚀 Triggering AI build with Gemini...");
+              addLog("🚀 Starting AI builder with Gemini...");
+              addLog("📝 Step 1/5: Generating technical specification...");
 
               // Call the build processor
               fetch("/api/build/process", { method: "POST" })
@@ -87,9 +94,10 @@ export default function BuildAppVisual({ jobId, idea, onComplete }: BuildAppVisu
                 .then(processData => {
                   if (processData.success) {
                     addLog(`✅ Build complete: ${processData.appName}`);
-                    addLog(`📁 Files: ${processData.filesGenerated?.length || 0} generated`);
+                    addLog(`📁 Generated ${processData.filesGenerated?.length || 0} files`);
+                    addLog(`📂 Location: ${processData.appDir}`);
                   } else if (processData.message?.includes("No pending")) {
-                    addLog("⏳ Waiting for build to complete...");
+                    addLog("⏳ Build in progress...");
                   } else {
                     addLog(`⚠️ ${processData.error || processData.message}`);
                   }
@@ -99,14 +107,30 @@ export default function BuildAppVisual({ jobId, idea, onComplete }: BuildAppVisu
                 });
             }
           } else if (job.status === "running") {
+            if (lastStatus !== "running") {
+              lastStatus = "running";
+              addLog("⚙️ AI is writing code...");
+            }
+
             // Progress through steps
             if (currentStep < 3) {
               updateStep(currentStep, "completed");
               setCurrentStep(prev => prev + 1);
               updateStep(currentStep + 1, "running");
-              addLog(`Step ${currentStep + 1} complete`);
+
+              // Log specific step completion
+              const stepNames = ["spec", "code", "image", "save"];
+              if (currentStep < stepNames.length) {
+                addLog(`✓ ${DEFAULT_STEPS[currentStep].name} completed`);
+                addLog(`📝 Step ${currentStep + 2}/5: ${DEFAULT_STEPS[currentStep + 1].name}...`);
+              }
             }
           } else if (job.status === "completed") {
+            if (lastStatus !== "completed") {
+              lastStatus = "completed";
+              addLog("🎉 Build completed successfully!");
+            }
+
             // Mark all steps complete
             setSteps(prev => prev.map(s => ({ ...s, status: "completed" })));
             setIsBuilding(false);
@@ -116,12 +140,20 @@ export default function BuildAppVisual({ jobId, idea, onComplete }: BuildAppVisu
             if (job.result) {
               try {
                 const result = JSON.parse(job.result);
+                addLog(`✨ App ready: ${result.appName || "Your App"}`);
+                addLog(`🚀 Ready to deploy to Vercel or Hostinger!`);
                 onComplete?.({ success: true, appId: result.appId, appName: result.appName });
               } catch {
+                addLog("✅ Build process complete!");
                 onComplete?.({ success: true });
               }
             }
           } else if (job.status === "failed") {
+            if (lastStatus !== "failed") {
+              lastStatus = "failed";
+              addLog(`❌ Build failed: ${job.error || "Unknown error"}`);
+              addLog("💡 Check the logs above for details");
+            }
             setError(job.error || "Build failed");
             updateStep(currentStep, "failed");
             setIsBuilding(false);
@@ -207,7 +239,7 @@ export default function BuildAppVisual({ jobId, idea, onComplete }: BuildAppVisu
           success: true,
           appId: processData.appId,
           appName: processData.appName,
-          previewImage,
+          previewImage: previewImage || undefined,
         });
       } else {
         throw new Error(processData.error || "Build failed");
@@ -258,6 +290,12 @@ export default function BuildAppVisual({ jobId, idea, onComplete }: BuildAppVisu
     }
   };
 
+  // Calculate progress percentage
+  const completedSteps = steps.filter(s => s.status === "completed").length;
+  const progressPercent = Math.round((completedSteps / steps.length) * 100);
+  const currentStepIndex = steps.findIndex(s => s.status === "running");
+  const currentStepNumber = currentStepIndex >= 0 ? currentStepIndex + 1 : completedSteps + 1;
+
   return (
     <div className="bg-gray-800 rounded-lg p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -274,6 +312,33 @@ export default function BuildAppVisual({ jobId, idea, onComplete }: BuildAppVisu
           </button>
         )}
       </div>
+
+      {/* Progress Bar */}
+      {isBuilding && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-300 font-medium">
+              {currentStepIndex >= 0
+                ? `Step ${currentStepNumber} of ${steps.length}: ${steps[currentStepIndex].name}`
+                : completedSteps === steps.length
+                ? "Build Complete!"
+                : `Preparing... (${completedSteps}/${steps.length} steps)`
+              }
+            </span>
+            <span className="text-purple-400 font-bold">{progressPercent}%</span>
+          </div>
+          <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-500 ease-out"
+              style={{ width: `${progressPercent}%` }}
+            >
+              {isBuilding && progressPercent < 100 && (
+                <div className="h-full w-full animate-pulse bg-white/20" />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Step Progress */}
       <div className="space-y-4">

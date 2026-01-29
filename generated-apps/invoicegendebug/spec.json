@@ -1,0 +1,27 @@
+{
+  "name": "invoicegendebug",
+  "displayName": "InvoiceGenDebug",
+  "tagline": "Simple invoice generation for freelancers",
+  "techStack": {
+    "framework": "Next.js 14",
+    "styling": "Tailwind CSS"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Landing"
+    },
+    {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    }
+  ],
+  "features": [
+    {
+      "name": "Invoice creation"
+    },
+    {
+      "name": "PDF export"
+    }
+  ]
+}

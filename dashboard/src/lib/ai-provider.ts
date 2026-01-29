@@ -1,9 +1,9 @@
 /**
  * AI Provider Abstraction
- * Swap between Gemini, Claude, Grok, or any AI API
+ * Swap between Gemini, Claude, DeepSeek, GLM, Grok, or any AI API
  */
 
-export type AIProvider = 'gemini' | 'claude' | 'grok' | 'openai' | 'local';
+export type AIProvider = 'gemini' | 'claude' | 'deepseek' | 'glm' | 'grok' | 'openai' | 'local';
 
 export interface AIMessage {
   role: 'user' | 'assistant' | 'system';
@@ -27,8 +27,10 @@ export interface AIProviderConfig {
 
 // Default models per provider
 const DEFAULT_MODELS: Record<AIProvider, string> = {
-  gemini: 'gemini-1.5-flash', // FREE and fast!
+  gemini: 'gemini-2.0-flash', // FREE and fast! (updated Jan 2026)
   claude: 'claude-3-5-haiku-20241022',
+  deepseek: 'deepseek-chat', // DeepSeek V3 - best value!
+  glm: 'glm-4-flash', // GLM-4 Flash - cheap and good
   grok: 'grok-2',
   openai: 'gpt-4o-mini',
   local: 'local',
@@ -38,6 +40,8 @@ const DEFAULT_MODELS: Record<AIProvider, string> = {
 const COSTS: Record<AIProvider, { input: number; output: number }> = {
   gemini: { input: 0, output: 0 }, // FREE tier!
   claude: { input: 0.25, output: 1.25 }, // Haiku
+  deepseek: { input: 0.14, output: 0.28 }, // DeepSeek V3 - super cheap!
+  glm: { input: 0.10, output: 0.10 }, // GLM-4 Flash - flat rate
   grok: { input: 2, output: 10 },
   openai: { input: 0.15, output: 0.60 }, // GPT-4o-mini
   local: { input: 0, output: 0 },
@@ -57,6 +61,10 @@ export async function callAI(
       return callGemini(messages, config.apiKey, model);
     case 'claude':
       return callClaude(messages, config.apiKey, model);
+    case 'deepseek':
+      return callDeepSeek(messages, config.apiKey, model);
+    case 'glm':
+      return callGLM(messages, config.apiKey, model);
     case 'grok':
       return callGrok(messages, config.apiKey, model);
     case 'openai':
@@ -210,6 +218,93 @@ async function callGrok(
 }
 
 /**
+ * DeepSeek - Best value for code generation
+ * $0.14/1M input, $0.28/1M output
+ */
+async function callDeepSeek(
+  messages: AIMessage[],
+  apiKey: string,
+  model: string
+): Promise<AIResponse> {
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: messages.map(m => ({
+        role: m.role,
+        content: m.content,
+      })),
+      max_tokens: 8192,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`DeepSeek error: ${error}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || '';
+  const inputTokens = data.usage?.prompt_tokens || 0;
+  const outputTokens = data.usage?.completion_tokens || 0;
+
+  return {
+    content,
+    provider: 'deepseek',
+    model,
+    tokens: inputTokens + outputTokens,
+    cost: (inputTokens * COSTS.deepseek.input + outputTokens * COSTS.deepseek.output) / 1_000_000,
+  };
+}
+
+/**
+ * GLM (Zhipu AI) - Cheap flat-rate pricing
+ * $0.10/1M for both input and output
+ */
+async function callGLM(
+  messages: AIMessage[],
+  apiKey: string,
+  model: string
+): Promise<AIResponse> {
+  const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: messages.map(m => ({
+        role: m.role,
+        content: m.content,
+      })),
+      max_tokens: 8192,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`GLM error: ${error}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || '';
+  const tokens = data.usage?.total_tokens || 0;
+
+  return {
+    content,
+    provider: 'glm',
+    model,
+    tokens,
+    cost: (tokens * COSTS.glm.input) / 1_000_000, // Flat rate
+  };
+}
+
+/**
  * OpenAI / OpenAI-compatible APIs
  */
 async function callOpenAI(
@@ -252,20 +347,56 @@ async function callOpenAI(
 }
 
 /**
- * Get the best available provider based on configured API keys
+ * Get the best available provider based on configured API keys and spending caps
  */
-export function getBestProvider(env: Record<string, string | undefined>): AIProviderConfig | null {
-  // Priority: Gemini (free) > Claude > OpenAI > Grok
-  if (env.GEMINI_API_KEY) {
+export function getBestProvider(
+  env: Record<string, string | undefined>,
+  excludeProvider?: string | {
+    caps?: Record<string, number>;      // Spending cap per provider
+    spent?: Record<string, number>;     // Current spend per provider
+  }
+): AIProviderConfig | null {
+  // Handle old options format (backward compatibility)
+  let exclude: string | null = null;
+  let options: { caps?: Record<string, number>; spent?: Record<string, number> } = {};
+
+  if (typeof excludeProvider === 'string') {
+    exclude = excludeProvider;
+  } else if (excludeProvider && typeof excludeProvider === 'object') {
+    options = excludeProvider;
+  }
+
+  const caps = options?.caps || {};
+  const spent = options?.spent || {};
+
+  // Check if provider is within budget and not excluded
+  const isAvailable = (provider: string): boolean => {
+    if (exclude && provider === exclude) return false;
+
+    const cap = caps[`cap_${provider}`];
+    if (cap === undefined || cap === null) return true; // No cap = unlimited
+    if (cap === 0) return false; // Cap of 0 = disabled
+    const currentSpend = spent[provider] || 0;
+    return currentSpend < cap;
+  };
+
+  // Priority: Gemini (free) > DeepSeek (cheap) > GLM (cheap) > Claude > OpenAI > Grok
+  if (env.GEMINI_API_KEY && isAvailable('gemini')) {
     return { provider: 'gemini', apiKey: env.GEMINI_API_KEY };
   }
-  if (env.ANTHROPIC_API_KEY) {
+  if (env.DEEPSEEK_API_KEY && isAvailable('deepseek')) {
+    return { provider: 'deepseek', apiKey: env.DEEPSEEK_API_KEY };
+  }
+  if (env.GLM_API_KEY && isAvailable('glm')) {
+    return { provider: 'glm', apiKey: env.GLM_API_KEY };
+  }
+  if (env.ANTHROPIC_API_KEY && isAvailable('anthropic')) {
     return { provider: 'claude', apiKey: env.ANTHROPIC_API_KEY };
   }
-  if (env.OPENAI_API_KEY) {
+  if (env.OPENAI_API_KEY && isAvailable('openai')) {
     return { provider: 'openai', apiKey: env.OPENAI_API_KEY };
   }
-  if (env.GROK_API_KEY) {
+  if (env.GROK_API_KEY && isAvailable('grok')) {
     return { provider: 'grok', apiKey: env.GROK_API_KEY };
   }
   return null;
@@ -285,6 +416,18 @@ export const PROVIDER_INFO: Record<AIProvider, {
     free: true,
     freeDetails: '1M tokens/day, 1500 req/day FREE',
     signupUrl: 'https://aistudio.google.com/app/apikey',
+  },
+  deepseek: {
+    name: 'DeepSeek',
+    free: false,
+    freeDetails: '$0.14/1M in, $0.28/1M out - BEST VALUE',
+    signupUrl: 'https://platform.deepseek.com/',
+  },
+  glm: {
+    name: 'GLM (Zhipu AI)',
+    free: false,
+    freeDetails: '$0.10/1M flat rate - CHEAPEST',
+    signupUrl: 'https://open.bigmodel.cn/',
   },
   claude: {
     name: 'Anthropic Claude',

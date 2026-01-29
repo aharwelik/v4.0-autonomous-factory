@@ -30,6 +30,14 @@ interface Settings {
   budgetCritical: number;
   parallelAgents: number;
   autoValidate: boolean;
+  // Per-service spending caps
+  cap_gemini?: number;
+  cap_deepseek?: number;
+  cap_glm?: number;
+  cap_anthropic?: number;
+  cap_openai?: number;
+  cap_grok?: number;
+  [key: string]: unknown; // Allow dynamic keys
 }
 
 export function SettingsPanel({ isOpen, onClose, onSettingsChange }: SettingsPanelProps) {
@@ -216,6 +224,47 @@ export function SettingsPanel({ isOpen, onClose, onSettingsChange }: SettingsPan
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Agents pause when budget is reached. You&apos;ll be notified at 75%.
+                </p>
+              </div>
+
+              {/* Per-Service Spending Caps */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-yellow-500" />
+                  <span className="font-medium">Per-Service Spending Caps</span>
+                </div>
+                <div className="space-y-2 text-sm">
+                  {[
+                    { key: "cap_gemini", label: "Gemini", hint: "Free tier - usually $0" },
+                    { key: "cap_deepseek", label: "DeepSeek", hint: "$0.14/M input" },
+                    { key: "cap_glm", label: "GLM", hint: "$0.10/M flat" },
+                    { key: "cap_anthropic", label: "Claude", hint: "$0.25/M input" },
+                    { key: "cap_openai", label: "OpenAI", hint: "$0.15/M input" },
+                    { key: "cap_grok", label: "Grok", hint: "$2.00/M input" },
+                  ].map(({ key, label, hint }) => (
+                    <div key={key} className="flex items-center justify-between gap-2">
+                      <div className="flex-1">
+                        <span className="text-muted-foreground">{label}</span>
+                        <span className="text-xs text-muted-foreground/50 ml-2">{hint}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          defaultValue={settings[key] as number ?? 50}
+                          onBlur={(e) => updateSetting(key as keyof Settings, Number(e.target.value))}
+                          className="w-16 px-2 py-1 rounded bg-background border text-right font-mono text-sm"
+                          disabled={saving}
+                        />
+                        <span className="text-xs text-muted-foreground">/mo</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Set to 0 to block a provider. Builds switch to next available provider when cap is hit.
                 </p>
               </div>
 

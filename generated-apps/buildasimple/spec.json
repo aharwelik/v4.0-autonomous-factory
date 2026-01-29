@@ -1,0 +1,24 @@
+{
+  "name": "buildasimple",
+  "displayName": "Buildasimple",
+  "tagline": "Build a simple meal planning app",
+  "techStack": {
+    "framework": "Next.js 14",
+    "styling": "Tailwind CSS"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Landing"
+    },
+    {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    }
+  ],
+  "features": [
+    {
+      "name": "Core functionality"
+    }
+  ]
+}

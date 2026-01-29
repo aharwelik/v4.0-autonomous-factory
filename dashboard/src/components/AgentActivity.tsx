@@ -1,279 +1,225 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import {
   Bot,
   Search,
   Hammer,
-  Megaphone,
-  Activity,
-  AlertCircle
+  Rocket,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 
-interface SubAgent {
-  name: string;
-  status: "running" | "idle" | "completed" | "error";
-}
-
-interface Agent {
-  name: string;
-  status: "working" | "idle" | "error";
-  currentTask: string | null;
-  progress: number;
-  subagents: SubAgent[];
-  costToday: number;
-}
-
-interface LogEntry {
-  time: string;
+interface JobActivity {
+  id: string;
   agent: string;
-  message: string;
-  level: "info" | "error" | "warning" | "success";
+  icon: string;
+  type: string;
+  status: string;
+  task: string;
+  startedAt: string;
+  completedAt?: string;
+  error?: string;
 }
 
-// Mock initial data
-const initialAgents: Agent[] = [
-  {
-    name: "orchestrator",
-    status: "working",
-    currentTask: "Coordinating agent tasks",
-    progress: 100,
-    subagents: [],
-    costToday: 0.45,
-  },
-  {
-    name: "researcher",
-    status: "working",
-    currentTask: "Scanning Reddit for opportunities",
-    progress: 67,
-    subagents: [
-      { name: "reddit-scanner", status: "running" },
-      { name: "trend-analyzer", status: "idle" },
-      { name: "competitor-checker", status: "completed" },
-    ],
-    costToday: 2.15,
-  },
-  {
-    name: "builder",
-    status: "idle",
-    currentTask: null,
-    progress: 0,
-    subagents: [
-      { name: "frontend", status: "idle" },
-      { name: "backend", status: "idle" },
-      { name: "database", status: "idle" },
-    ],
-    costToday: 0.0,
-  },
-  {
-    name: "marketer",
-    status: "working",
-    currentTask: "Generating Twitter content",
-    progress: 45,
-    subagents: [
-      { name: "content-writer", status: "running" },
-      { name: "image-generator", status: "idle" },
-    ],
-    costToday: 1.20,
-  },
-  {
-    name: "operator",
-    status: "idle",
-    currentTask: null,
-    progress: 0,
-    subagents: [],
-    costToday: 0.05,
-  },
-];
+interface JobStats {
+  total: number;
+  running: number;
+  queued: number;
+  completed: number;
+  failed: number;
+}
 
-const initialLogs: LogEntry[] = [
-  { time: "14:32:05", agent: "researcher", message: "Found 3 new opportunities on r/SaaS", level: "success" },
-  { time: "14:31:42", agent: "orchestrator", message: "Starting daily research cycle", level: "info" },
-  { time: "14:30:18", agent: "marketer", message: "Scheduled 5 tweets for tomorrow", level: "success" },
-  { time: "14:28:55", agent: "researcher", message: "Analyzing competitor: TaskFlow Pro", level: "info" },
-  { time: "14:25:33", agent: "operator", message: "Health check passed for all apps", level: "info" },
-];
-
-const agentIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  orchestrator: Bot,
-  researcher: Search,
-  builder: Hammer,
-  marketer: Megaphone,
-  operator: Activity,
+// Map icon names to components
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  hammer: Hammer,
+  check: CheckCircle,
+  rocket: Rocket,
+  search: Search,
+  "file-text": FileText,
+  bot: Bot,
 };
 
-const agentColors: Record<string, string> = {
-  orchestrator: "bg-purple-500",
-  researcher: "bg-blue-500",
-  builder: "bg-green-500",
-  marketer: "bg-orange-500",
-  operator: "bg-red-500",
-};
-
-const agentTextColors: Record<string, string> = {
-  orchestrator: "text-purple-500",
-  researcher: "text-blue-500",
-  builder: "text-green-500",
-  marketer: "text-orange-500",
-  operator: "text-red-500",
+// Status colors and icons
+const statusConfig: Record<string, { color: string; textColor: string; icon: React.ReactNode }> = {
+  running: {
+    color: "bg-blue-500",
+    textColor: "text-blue-500",
+    icon: <Loader2 className="w-3 h-3 animate-spin" />,
+  },
+  queued: {
+    color: "bg-yellow-500",
+    textColor: "text-yellow-500",
+    icon: <Clock className="w-3 h-3" />,
+  },
+  completed: {
+    color: "bg-green-500",
+    textColor: "text-green-500",
+    icon: <CheckCircle className="w-3 h-3" />,
+  },
+  failed: {
+    color: "bg-red-500",
+    textColor: "text-red-500",
+    icon: <XCircle className="w-3 h-3" />,
+  },
 };
 
 export function AgentActivity() {
-  const [agents, setAgents] = useState<Agent[]>(initialAgents);
-  const [logs, setLogs] = useState<LogEntry[]>(initialLogs);
+  const [activities, setActivities] = useState<JobActivity[]>([]);
+  const [stats, setStats] = useState<JobStats | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Simulate real-time updates (mock WebSocket behavior)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Randomly update agent progress
-      setAgents((prev) =>
-        prev.map((agent) => {
-          if (agent.status === "working" && agent.progress < 100) {
-            return {
-              ...agent,
-              progress: Math.min(agent.progress + Math.random() * 5, 100),
-            };
-          }
-          return agent;
-        })
-      );
-
-      // Occasionally add a new log entry
-      if (Math.random() > 0.7) {
-        const messages = [
-          { agent: "researcher", message: "Scanning new subreddit...", level: "info" as const },
-          { agent: "marketer", message: "Generated new content piece", level: "success" as const },
-          { agent: "orchestrator", message: "Task queue updated", level: "info" as const },
-        ];
-        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-        const newLog: LogEntry = {
-          time: new Date().toLocaleTimeString("en-US", { hour12: false }),
-          ...randomMessage,
-        };
-        setLogs((prev) => [newLog, ...prev].slice(0, 100));
+  const fetchJobs = useCallback(async () => {
+    try {
+      const res = await fetch("/api/jobs?limit=20");
+      const data = await res.json();
+      if (data.success) {
+        setActivities(data.activities || []);
+        setStats(data.stats || null);
       }
-    }, 3000);
-
-    return () => clearInterval(interval);
+    } catch (err) {
+      console.error("Failed to fetch jobs:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    fetchJobs();
+    // Poll every 5 seconds for updates
+    const interval = setInterval(fetchJobs, 5000);
+    return () => clearInterval(interval);
+  }, [fetchJobs]);
+
+  const formatTimeAgo = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSecs < 60) return `${diffSecs}s ago`;
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Agent Status Cards */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Active Agents</h3>
-        {agents.map((agent) => {
-          const Icon = agentIcons[agent.name] || Bot;
-          return (
-            <Card key={agent.name}>
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-3 h-3 rounded-full ${agentColors[agent.name]} ${
-                        agent.status === "working" ? "animate-pulse" : ""
-                      }`}
-                    />
-                    <Icon className={`w-5 h-5 ${agentTextColors[agent.name]}`} />
-                    <div>
-                      <div className="font-medium capitalize">{agent.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {agent.currentTask || "Idle"}
+    <div className="space-y-6">
+      {/* Stats Row */}
+      {stats && (
+        <div className="grid grid-cols-5 gap-4">
+          <Card className="p-3 text-center">
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-xs text-muted-foreground">Total Jobs</div>
+          </Card>
+          <Card className="p-3 text-center border-blue-500/30">
+            <div className="text-2xl font-bold text-blue-500">{stats.running}</div>
+            <div className="text-xs text-muted-foreground">Running</div>
+          </Card>
+          <Card className="p-3 text-center border-yellow-500/30">
+            <div className="text-2xl font-bold text-yellow-500">{stats.queued}</div>
+            <div className="text-xs text-muted-foreground">Queued</div>
+          </Card>
+          <Card className="p-3 text-center border-green-500/30">
+            <div className="text-2xl font-bold text-green-500">{stats.completed}</div>
+            <div className="text-xs text-muted-foreground">Completed</div>
+          </Card>
+          <Card className="p-3 text-center border-red-500/30">
+            <div className="text-2xl font-bold text-red-500">{stats.failed}</div>
+            <div className="text-xs text-muted-foreground">Failed</div>
+          </Card>
+        </div>
+      )}
+
+      {/* Activity List */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Recent Activity</h3>
+        <Button variant="ghost" size="sm" onClick={fetchJobs}>
+          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+        </Button>
+      </div>
+
+      {activities.length === 0 ? (
+        <Card className="p-8 text-center">
+          <Bot className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+          <p className="text-muted-foreground">No agent activity yet.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Submit an idea above to start building.
+          </p>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {activities.map((activity) => {
+            const Icon = iconMap[activity.icon] || Bot;
+            const status = statusConfig[activity.status] || statusConfig.queued;
+
+            return (
+              <Card key={activity.id} className={`${
+                activity.status === "running" ? "border-blue-500/30" :
+                activity.status === "failed" ? "border-red-500/30" : ""
+              }`}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-4">
+                    {/* Status indicator */}
+                    <div className={`mt-1 w-2 h-2 rounded-full ${status.color} ${
+                      activity.status === "running" ? "animate-pulse" : ""
+                    }`} />
+
+                    {/* Agent icon */}
+                    <Icon className={`w-5 h-5 ${status.textColor}`} />
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">{activity.agent}</span>
+                        <Badge variant={
+                          activity.status === "running" ? "default" :
+                          activity.status === "completed" ? "outline" :
+                          activity.status === "failed" ? "destructive" :
+                          "secondary"
+                        } className="gap-1">
+                          {status.icon}
+                          {activity.status}
+                        </Badge>
                       </div>
+                      <p className="text-sm text-muted-foreground truncate mt-0.5">
+                        {activity.task}
+                      </p>
+                      <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                        <span>Started {formatTimeAgo(activity.startedAt)}</span>
+                        {activity.completedAt && (
+                          <span>• Completed {formatTimeAgo(activity.completedAt)}</span>
+                        )}
+                      </div>
+                      {activity.error && (
+                        <p className="text-xs text-red-400 mt-1">{activity.error}</p>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <Badge
-                      variant={
-                        agent.status === "working"
-                          ? "default"
-                          : agent.status === "error"
-                          ? "destructive"
-                          : "secondary"
-                      }
-                    >
-                      {agent.status}
-                    </Badge>
-                    {agent.progress > 0 && agent.progress < 100 && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {Math.round(agent.progress)}%
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {agent.progress > 0 && agent.progress < 100 && (
-                  <Progress value={agent.progress} className="mt-3 h-2" />
-                )}
-
-                {/* Subagents */}
-                {agent.subagents.length > 0 && (
-                  <div className="mt-3 pl-6 space-y-2 border-l-2 border-muted ml-1">
-                    {agent.subagents.map((sub) => (
-                      <div
-                        key={sub.name}
-                        className="flex items-center justify-between text-sm"
-                      >
-                        <span className="text-muted-foreground">{sub.name}</span>
-                        <span
-                          className={
-                            sub.status === "running"
-                              ? "text-green-500"
-                              : sub.status === "error"
-                              ? "text-red-500"
-                              : "text-muted-foreground"
-                          }
-                        >
-                          {sub.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Cost for this agent today */}
-                <div className="mt-3 text-xs text-muted-foreground">
-                  Today&apos;s cost: ${agent.costToday.toFixed(2)}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Activity Log */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Live Activity</h3>
-        <Card className="h-[600px] overflow-hidden">
-          <CardContent className="p-0">
-            <div className="h-full overflow-y-auto p-4 font-mono text-sm">
-              {logs.map((log, i) => (
-                <div
-                  key={`${log.time}-${i}`}
-                  className={`py-1 ${
-                    log.level === "error"
-                      ? "text-red-500"
-                      : log.level === "warning"
-                      ? "text-yellow-500"
-                      : log.level === "success"
-                      ? "text-green-500"
-                      : ""
-                  }`}
-                >
-                  <span className="text-muted-foreground">{log.time}</span>{" "}
-                  <span className={`font-medium ${agentTextColors[log.agent]}`}>
-                    [{log.agent}]
-                  </span>{" "}
-                  {log.message}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

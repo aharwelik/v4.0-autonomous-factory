@@ -107,6 +107,50 @@ const services: Service[] = [
     signupUrl: "https://aistudio.google.com/app/apikey",
   },
   {
+    id: "deepseek",
+    name: "DeepSeek",
+    category: "ai",
+    purpose: "Best value AI for code generation - RECOMMENDED",
+    whyNeeded: "Excellent coding quality at rock-bottom prices. Great alternative when Gemini quota runs out. Fast and reliable.",
+    required: false,
+    free: false,
+    freeDetails: "$0.14/1M input, $0.28/1M output - builds apps for ~$0.006 each!",
+    envVars: [
+      { key: "DEEPSEEK_API_KEY", label: "API Key", placeholder: "sk-...", secret: true }
+    ],
+    steps: [
+      "Click 'Get Key' - opens DeepSeek platform",
+      "Sign up with email or Google",
+      "Go to 'API Keys' in the dashboard",
+      "Click 'Create API Key'",
+      "Copy the key and paste below",
+      "Add some credit ($5-10 is enough for hundreds of builds)"
+    ],
+    signupUrl: "https://platform.deepseek.com/api_keys",
+  },
+  {
+    id: "glm",
+    name: "GLM (Zhipu AI)",
+    category: "ai",
+    purpose: "Cheapest flat-rate AI from China",
+    whyNeeded: "Ultra cheap at $0.10/1M tokens for both input AND output. Good for high-volume builds. Based in China.",
+    required: false,
+    free: false,
+    freeDetails: "$0.10/1M flat rate - cheapest per-token cost available",
+    envVars: [
+      { key: "GLM_API_KEY", label: "API Key", placeholder: "your-glm-api-key", secret: true }
+    ],
+    steps: [
+      "Click 'Get Key' - opens Zhipu AI platform",
+      "Sign up (may need phone verification)",
+      "Go to console and find API Keys section",
+      "Create a new API key",
+      "Copy and paste below",
+      "Note: Interface may be in Chinese - use browser translate"
+    ],
+    signupUrl: "https://open.bigmodel.cn/",
+  },
+  {
     id: "anthropic",
     name: "Anthropic Claude",
     category: "ai",
@@ -147,6 +191,27 @@ const services: Service[] = [
       "Copy and paste below"
     ],
     signupUrl: "https://platform.openai.com/api-keys",
+  },
+  {
+    id: "grok",
+    name: "xAI Grok",
+    category: "ai",
+    purpose: "Elon's AI - good for real-time data",
+    whyNeeded: "Grok has access to real-time Twitter/X data which can help with market research. More expensive than others.",
+    required: false,
+    free: false,
+    freeDetails: "$2/1M input, $10/1M output - premium pricing",
+    envVars: [
+      { key: "GROK_API_KEY", label: "API Key", placeholder: "xai-...", secret: true }
+    ],
+    steps: [
+      "Click 'Get Key' - opens xAI console",
+      "Sign up with email",
+      "Go to API Keys section",
+      "Create a new API key",
+      "Copy and paste below"
+    ],
+    signupUrl: "https://console.x.ai/",
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -403,6 +468,14 @@ export function SetupGuide({ onKeySaved }: SetupGuideProps = {}) {
     return isCategoryConfigured(service.category); // Gray out if another in category is configured
   };
 
+  // Get the name of the configured service in a category
+  const getConfiguredServiceName = (category: string): string | null => {
+    const configured = services
+      .filter((s) => s.category === category)
+      .find((s) => isServiceConfigured(s));
+    return configured?.name || null;
+  };
+
   // Save keys for a service
   const saveKeys = async (service: Service) => {
     const keysToSave: Record<string, string> = {};
@@ -550,7 +623,11 @@ export function SetupGuide({ onKeySaved }: SetupGuideProps = {}) {
                             {configured && <Badge className="bg-green-600 text-xs">✓ Configured</Badge>}
                             {service.free && !configured && !grayedOut && <Badge className="bg-blue-600 text-xs">FREE</Badge>}
                             {!configured && !grayedOut && <Badge variant="outline" className="text-xs">Click to set up →</Badge>}
-                            {grayedOut && <Badge variant="secondary" className="text-xs">Alternative (not needed)</Badge>}
+                            {grayedOut && (
+                              <Badge variant="secondary" className="text-xs">
+                                {getConfiguredServiceName(service.category)} is active
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground">{service.purpose}</p>
                         </div>

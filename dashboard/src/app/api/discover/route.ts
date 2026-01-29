@@ -151,6 +151,10 @@ export async function POST(request: NextRequest) {
       source: body.source || "discovered",
       score: body.score || 50,
       status: "new",
+      auto_discovered: 1,
+      signal_count: 1,
+      search_growth: 0,
+      competitor_count: 0,
     });
 
     // Clear dashboard cache

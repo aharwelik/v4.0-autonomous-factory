@@ -42,10 +42,22 @@ function buildDashboardData() {
   const contentData = getDemoContentData(); // Content is always demo for now
 
   return {
-    pipeline,
-    apps: appsData,
-    content: contentData,
-    costs: costsData,
+    pipeline: {
+      ...pipeline,
+      isDemo: !hasRealData,
+    },
+    apps: appsData.map(app => ({
+      ...app,
+      isDemo: app.id.startsWith('demo-'),
+    })),
+    content: contentData.map(c => ({
+      ...c,
+      isDemo: true, // Content is always demo for now
+    })),
+    costs: {
+      ...costsData,
+      isDemo: Object.keys(getRealCostsData()).length === 0,
+    },
     budget: {
       monthly: settings.get<number>('budgetMonthly') ?? 100,
       alerts: {
@@ -133,14 +145,30 @@ function getRealCostsData() {
     return getDemoCostsData();
   }
 
-  return {
-    claude: { total: byService['claude'] || 0, tokens: 0 },
-    gemini: { total: byService['gemini'] || 0, count: 0 },
-    grok: { total: byService['grok'] || 0, tokens: 0 },
-    captcha: { total: byService['captcha'] || 0, count: 0 },
-    vercel: { total: byService['vercel'] || 0, count: 0 },
-    browseruse: { total: byService['browseruse'] || 0, count: 0 },
-  };
+  // Return all tracked services (AI providers + other services)
+  const result: Record<string, { total: number; tokens?: number; count?: number }> = {};
+
+  // AI Providers
+  if (byService['gemini']) result['gemini'] = { total: byService['gemini'], count: 0 };
+  if (byService['deepseek']) result['deepseek'] = { total: byService['deepseek'], tokens: 0 };
+  if (byService['glm']) result['glm'] = { total: byService['glm'], tokens: 0 };
+  if (byService['claude']) result['claude'] = { total: byService['claude'], tokens: 0 };
+  if (byService['openai']) result['openai'] = { total: byService['openai'], tokens: 0 };
+  if (byService['grok']) result['grok'] = { total: byService['grok'], tokens: 0 };
+
+  // Other services
+  if (byService['captcha']) result['captcha'] = { total: byService['captcha'], count: 0 };
+  if (byService['vercel']) result['vercel'] = { total: byService['vercel'], count: 0 };
+  if (byService['browseruse']) result['browseruse'] = { total: byService['browseruse'], count: 0 };
+
+  // Include any other services we might have missed
+  for (const [service, total] of Object.entries(byService)) {
+    if (!result[service]) {
+      result[service] = { total: total as number };
+    }
+  }
+
+  return result;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -243,12 +271,11 @@ function getDemoContentData() {
 
 function getDemoCostsData() {
   return {
-    claude: { total: 8.5, tokens: 2500000 },
-    gemini: { total: 3.2, count: 80 },
-    grok: { total: 1.5, tokens: 500000 },
-    captcha: { total: 0.8, count: 400 },
-    vercel: { total: 0, count: 0 },
-    browseruse: { total: 2.1, count: 42 },
+    gemini: { total: 0, count: 50 }, // FREE tier
+    deepseek: { total: 0.42, tokens: 3000000 }, // Super cheap
+    glm: { total: 0.15, tokens: 1500000 }, // Cheapest
+    claude: { total: 1.25, tokens: 500000 },
+    openai: { total: 0.80, tokens: 400000 },
   };
 }
 

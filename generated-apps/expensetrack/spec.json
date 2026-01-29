@@ -1,0 +1,30 @@
+{
+  "name": "expensetrack",
+  "displayName": "ExpenseTrack",
+  "tagline": "Track expenses effortlessly",
+  "techStack": {
+    "framework": "Next.js 14",
+    "styling": "Tailwind CSS"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "name": "Landing"
+    },
+    {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    }
+  ],
+  "features": [
+    {
+      "name": "Expense logging"
+    },
+    {
+      "name": "Categories"
+    },
+    {
+      "name": "Reports"
+    }
+  ]
+}

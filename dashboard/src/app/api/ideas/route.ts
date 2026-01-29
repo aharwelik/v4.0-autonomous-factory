@@ -45,6 +45,10 @@ export async function POST(request: NextRequest) {
       source: body.source || 'dashboard',
       score: 0, // Will be calculated during validation
       status: 'new',
+      auto_discovered: 0,
+      signal_count: 0,
+      search_growth: 0,
+      competitor_count: 0,
     });
 
     // Create a background job for validation if enabled
