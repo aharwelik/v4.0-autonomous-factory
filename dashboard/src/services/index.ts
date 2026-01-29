@@ -47,17 +47,8 @@ export function areServicesRunning(): boolean {
 }
 
 /**
- * Auto-start services in production
- * Called when app initializes
+ * Services are started manually via API endpoint
+ * to avoid breaking client-side rendering
+ *
+ * Call startAllServices() from an API route instead
  */
-if (process.env.NODE_ENV !== "test") {
-  // Start services automatically
-  // We use a setTimeout to avoid blocking the initial render
-  setTimeout(() => {
-    try {
-      startAllServices();
-    } catch (error) {
-      console.error("Failed to auto-start services:", error);
-    }
-  }, 1000);
-}

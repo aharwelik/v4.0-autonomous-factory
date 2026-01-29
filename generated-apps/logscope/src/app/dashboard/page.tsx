@@ -70,15 +70,15 @@ export default function DashboardPage() {
             </button>
           </div>
           <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900">Root cause analysis tools</h3>
-            <p className="mt-2 text-sm text-slate-600">Manage your root cause analysis tools</p>
+            <h3 className="text-lg font-semibold text-slate-900">Customizable visual dashboards</h3>
+            <p className="mt-2 text-sm text-slate-600">Manage your customizable visual dashboards</p>
             <button className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
               Get Started
             </button>
           </div>
           <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900">Step-by-step debugging workflows</h3>
-            <p className="mt-2 text-sm text-slate-600">Manage your step-by-step debugging workflows</p>
+            <h3 className="text-lg font-semibold text-slate-900">Real-time metrics and KPIs</h3>
+            <p className="mt-2 text-sm text-slate-600">Manage your real-time metrics and kpis</p>
             <button className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
               Get Started
             </button>

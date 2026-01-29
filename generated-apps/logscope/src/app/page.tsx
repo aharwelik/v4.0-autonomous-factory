@@ -45,16 +45,16 @@ export default function Home() {
           </div>
           
           <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-            <h3 className="text-xl font-semibold text-white mb-3">Root cause analysis tools</h3>
+            <h3 className="text-xl font-semibold text-white mb-3">Customizable visual dashboards</h3>
             <p className="text-slate-400">
-              Powerful root cause analysis tools to help it departments and msps succeed.
+              Powerful customizable visual dashboards to help it departments and msps succeed.
             </p>
           </div>
           
           <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-            <h3 className="text-xl font-semibold text-white mb-3">Step-by-step debugging workflows</h3>
+            <h3 className="text-xl font-semibold text-white mb-3">Real-time metrics and KPIs</h3>
             <p className="text-slate-400">
-              Powerful step-by-step debugging workflows to help it departments and msps succeed.
+              Powerful real-time metrics and kpis to help it departments and msps succeed.
             </p>
           </div>
           
