@@ -126,7 +126,7 @@ async function monitorActiveBuilds(): Promise<void> {
     const currentBuildIds = new Set(activeJobs.map(j => j.id));
 
     // Remove completed builds from monitoring
-    for (const buildId of state.activeBuilds) {
+    for (const buildId of Array.from(state.activeBuilds)) {
       if (!currentBuildIds.has(buildId)) {
         state.activeBuilds.delete(buildId);
         console.log(`✅ Build ${buildId} completed, stopped monitoring`);
@@ -216,7 +216,7 @@ async function handleBuildError(jobId: string, error: BuildError): Promise<void>
       // Update job with fix info and retry
       backgroundJobs.update(jobId, {
         status: "queued",
-        error: null,
+        error: undefined,
         data: JSON.stringify({
           ...jobData,
           retryCount: retryCount + 1,
